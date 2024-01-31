@@ -42,7 +42,7 @@ impl TransportMessage {
     }
 
     /// Returns a reference to the body of the message
-    pub(crate) fn body(&self) -> &Vec<u8> {
+    pub fn body(&self) -> &Vec<u8> {
         &self.body
     }
 

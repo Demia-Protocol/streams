@@ -30,7 +30,9 @@ pub struct Message {
     /// The message public key
     pub public_key: Vec<u8>,
     /// The message Signature
-    pub signature: Vec<u8>
+    pub signature: Vec<u8>,
+    /// Raw message
+    pub raw: Vec<u8>,
 }
 
 impl Message {
@@ -42,7 +44,7 @@ impl Message {
     ///
     /// Returns:
     /// A [`Message`] struct
-    pub(crate) fn from_lets_message<Unwrap>(address: Address, public_key: Vec<u8>, signature: Vec<u8>, lets_message: LetsMessage<Unwrap>) -> Self
+    pub(crate) fn from_lets_message<Unwrap>(address: Address, public_key: Vec<u8>, signature: Vec<u8>, raw: Vec<u8>, lets_message: LetsMessage<Unwrap>) -> Self
     where
         Unwrap: Into<MessageContent>,
     {
@@ -51,6 +53,7 @@ impl Message {
             address,
             public_key,
             signature,
+            raw,
             header: parts.0,
             content: parts.1.into_content().into(),
         }
@@ -66,11 +69,13 @@ impl Message {
     /// Returns:
     /// An `Orphan` [`Message`]
     pub(crate) fn orphan(address: Address, public_key: Vec<u8>, signature: Vec<u8>, preparsed: PreparsedMessage) -> Self {
+        let raw = preparsed.transport_msg().body().clone();
         let parts = preparsed.into_parts();
         Self {
             address,
             public_key,
             signature,
+            raw,
             header: parts.0,
             content: MessageContent::Orphan(Orphan {
                 cursor: parts.3,
