@@ -71,7 +71,7 @@ Add the following to your `Cargo.toml` file:
 ```bash
 [dependencies]
 anyhow = { version = "1.0", default-features = false }
-iota-streams = { git = "https://github.com/Immutable-Futures/streams", branch  = "develop"}
+iota-streams = { git = "https://github.com/demia-protocol/streams", branch  = "develop"}
 ```
 
 **Local**
