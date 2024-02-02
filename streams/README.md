@@ -23,7 +23,7 @@ Clients can be created so long as they implement the [`Transport`](../lets/src/t
 ## Getting Started
 Import the library into your crate
 ```
-streams = { git = "https://github.com/Immutable-Futures/streams", default-features = false, features = ["did", "utangle-client"] }
+streams = { git = "https://github.com/demia-protocol/streams", default-features = false, features = ["did", "utangle-client"] }
 ```
 
 ------------
