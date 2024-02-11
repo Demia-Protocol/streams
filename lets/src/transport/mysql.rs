@@ -164,6 +164,23 @@ impl SqlMessage {
         self.signature = signature.to_bytes().to_vec();
         self
     }
+
+    pub fn msg_id(&self) -> &[u8] {
+        &self.msg_id
+    }
+    pub fn raw_content(&self) -> &[u8] {
+        &self.raw_content
+    }
+    pub fn public_key(&self) -> &[u8] {
+        &self.public_key
+    }
+    pub fn signature(&self) -> &[u8] {
+        &self.signature
+    }
+    pub fn timestamp(&self) -> &chrono::NaiveDateTime {
+        &self.timestamp
+    }
+
 }
 
 impl AsRef<[u8]> for SqlMessage {
