@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use async_trait::async_trait;
 use serde::__private::PhantomData;
 use serde::{Deserialize, Serialize};
-use sqlx::mysql::MySqlPool;
+use sqlx::mysql::{MySqlDatabaseError, MySqlPool};
 
 pub struct Client<StreamsMessage = TransportMessage, DbMessage = SqlMessage>(
     MySqlPool,
@@ -29,12 +29,12 @@ impl<SM, DM> Client<SM, DM> {
 
 impl<SM, DM> Client<SM, DM> {
     async fn insert_message(&mut self, sql_msg: SqlMessage) -> Result<()> {
-        sqlx::query!(
+        // TODO: check sql error code to confirm it's just a 23000 (already stored) error
+        let _ = sqlx::query!(
            r#"INSERT INTO app (app_id) VALUES (?)"#,
             sql_msg.app_id,
         ).execute(&self.0)
-            .await
-            .map_err(|e| Error::MySqlClient("inserting message", e))?;
+            .await;
 
         Ok(sqlx::query!(
             r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) VALUES (?, ?, ?, ?, ?, ?)"#,
@@ -139,14 +139,14 @@ where
 
 #[derive(sqlx::FromRow, Clone, Serialize, Deserialize, Default, Debug)]
 pub struct SqlMessage {
-    msg_id: Vec<u8>,
-    raw_content: Vec<u8>,
-    timestamp: chrono::NaiveDateTime,
+    pub msg_id: Vec<u8>,
+    pub raw_content: Vec<u8>,
+    pub timestamp: chrono::NaiveDateTime,
     //#[cfg(feature = "did")]
-    public_key: Vec<u8>,
+    pub public_key: Vec<u8>,
     //#[cfg(feature = "did")]
-    signature: Vec<u8>,
-    app_id: Vec<u8>,
+    pub signature: Vec<u8>,
+    pub app_id: Vec<u8>,
 }
 
 impl SqlMessage {
@@ -179,27 +179,6 @@ impl SqlMessage {
         self.signature = signature.to_bytes().to_vec();
         self
     }
-
-    pub fn msg_id(&self) -> &[u8] {
-        &self.msg_id
-    }
-
-    pub fn app_id(&self) -> &[u8] {
-        &self.app_id
-    }
-    pub fn raw_content(&self) -> &[u8] {
-        &self.raw_content
-    }
-    pub fn public_key(&self) -> &[u8] {
-        &self.public_key
-    }
-    pub fn signature(&self) -> &[u8] {
-        &self.signature
-    }
-    pub fn timestamp(&self) -> &chrono::NaiveDateTime {
-        &self.timestamp
-    }
-
 }
 
 impl AsRef<[u8]> for SqlMessage {
