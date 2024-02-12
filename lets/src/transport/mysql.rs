@@ -29,13 +29,21 @@ impl<SM, DM> Client<SM, DM> {
 
 impl<SM, DM> Client<SM, DM> {
     async fn insert_message(&mut self, sql_msg: SqlMessage) -> Result<()> {
+        sqlx::query!(
+           r#"INSERT INTO app (app_id) VALUES (?)"#,
+            sql_msg.app_id,
+        ).execute(&self.0)
+            .await
+            .map_err(|e| Error::MySqlClient("inserting message", e))?;
+
         Ok(sqlx::query!(
-            r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature) VALUES (?, ?, ?, ?, ?)"#,
+            r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) VALUES (?, ?, ?, ?, ?, ?)"#,
             sql_msg.msg_id,
             sql_msg.raw_content,
             sql_msg.timestamp,
             sql_msg.public_key,
             sql_msg.signature,
+            sql_msg.app_id,
         )
         .execute(&self.0)
         .await
@@ -50,12 +58,18 @@ impl<SM, DM> Client<SM, DM> {
     }
 
     async fn retrieve_message(&mut self, address: Address) -> Result<SqlMessage> {
-        let mut msg_id_bytes = address.base().as_bytes().to_vec();
-        msg_id_bytes.extend_from_slice(address.relative().as_bytes());
-        let sql_message: SqlMessage = sqlx::query_as!(SqlMessage, r#"SELECT * FROM sql_messages WHERE msg_id = ?"#, msg_id_bytes)
+        let app_id_bytes = address.base().as_bytes().to_vec();
+        let msg_id_bytes = address.relative().as_bytes().to_vec();
+        let sql_message: SqlMessage = sqlx::query_as!(
+            SqlMessage,
+            r#"SELECT * FROM sql_messages WHERE msg_id = ? AND app_id = ?"#,
+            msg_id_bytes,
+            app_id_bytes
+        )
             .fetch_one(&self.0)
             .await
             .map_err(|e| Error::MySqlClient("fetching message", e))?;
+
         if sql_message.signature.len() != 64 {
             return Err(Error::InvalidSize("signature", 64, sql_message.signature.len() as u64))
         }
@@ -132,6 +146,7 @@ pub struct SqlMessage {
     public_key: Vec<u8>,
     //#[cfg(feature = "did")]
     signature: Vec<u8>,
+    app_id: Vec<u8>,
 }
 
 impl SqlMessage {
@@ -150,8 +165,8 @@ impl SqlMessage {
     }
 
     fn with_address(mut self, address: Address) -> Self {
-        self.msg_id = address.base().as_bytes().to_vec();
-        self.msg_id.extend_from_slice(address.relative().as_bytes());
+        self.msg_id = address.relative().as_bytes().to_vec();
+        self.app_id = address.base().as_bytes().to_vec();
         self
     }
 
@@ -167,6 +182,10 @@ impl SqlMessage {
 
     pub fn msg_id(&self) -> &[u8] {
         &self.msg_id
+    }
+
+    pub fn app_id(&self) -> &[u8] {
+        &self.app_id
     }
     pub fn raw_content(&self) -> &[u8] {
         &self.raw_content
