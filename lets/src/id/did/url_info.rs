@@ -173,17 +173,17 @@ impl DIDUrlInfo {
     }
 
     /// Returns the node endpoint URL string
-    pub(crate) fn client_url(&self) -> &str {
+    pub fn client_url(&self) -> &str {
         &self.client_url
     }
 
     /// Returns the label for key exchange methods
-    pub(crate) fn exchange_fragment(&self) -> &str {
+    pub fn exchange_fragment(&self) -> &str {
         &self.exchange_fragment
     }
 
     /// Returns the label for signature methods
-    pub(crate) fn signing_fragment(&self) -> &str {
+    pub fn signing_fragment(&self) -> &str {
         &self.signing_fragment
     }
 
