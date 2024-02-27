@@ -456,6 +456,35 @@ impl<T> User<T> {
         Ok(User { transport, state })
     }
 
+    /// The function `has_permission` checks if the user has the required permission for a
+    /// specific action on a given topic.
+    /// 
+    /// Arguments:
+    /// 
+    /// * `topic`: The topic for whichv you want to check the permission.
+    /// * `action`: the type of permission being checked for a specific topic.
+    /// 
+    /// Returns:
+    /// 
+    pub fn has_permission(&self, topic: &Topic, action: PermissionType) -> bool {
+        let id = self.identifier();
+        if id.is_none() {
+            // TODO check psks access
+            return false;
+        }
+
+        let perms = self.state.cursor_store.get_permission(topic, self.identifier().unwrap());
+        match (perms, action) {
+            (None, _) | (Some(_), PermissionType::Read)  => true, // TODO: make it so we check if we can decrypt
+            (Some(p), PermissionType::ReadWrite) => {
+                !(PermissionType::Read == p.into())
+            }
+            (Some(p), PermissionType::Admin) => {
+                PermissionType::Admin == p.into()
+            }
+        }
+    }
+
     pub(crate) fn update_permissions(
         &mut self,
         topic: &Topic,

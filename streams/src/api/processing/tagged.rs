@@ -65,8 +65,8 @@ where
             .ok_or(Error::NoCursor(topic.clone()))?
             .clone();
 
-        permission =
-            self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission)?;
+        // Check pre for time-related permissions
+        permission = self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission.clone(),  self.latest_timestamp().await?).await?.1;
 
         if permission.is_readonly() {
             return Err(Error::WrongRole(
@@ -121,10 +121,13 @@ where
         // If message has been sent successfully, commit message to stores
         self.state
             .cursor_store
-            .insert_cursor(&topic, permission, new_cursor);
+            .insert_cursor(&topic, permission.clone(), new_cursor);
         self.store_spongos(rel_address, spongos, link_to);
+        // Post permission check to remove permisisons if this was the last msg allowed
+        self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission,  self.latest_timestamp().await?).await?;
         // Update Branch Links
         self.set_latest_link(topic, rel_address);
+
         Ok(SendResponse::new(message_address, send_response))
     }
 }
@@ -162,7 +165,14 @@ impl<T> User<T> {
         // handling the message
         self.state
             .cursor_store
-            .insert_cursor(&topic, permission, preparsed.header().sequence());
+            .insert_cursor(&topic, permission.clone(), preparsed.header().sequence());
+
+        // Check pre for time-related permissions
+        let (changed, permission) =
+            self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission.clone(),  preparsed.header().timestamp as u128).await?;
+        if changed {
+            // lost permission
+        }
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -186,8 +196,11 @@ impl<T> User<T> {
         // Store spongos
         self.store_spongos(address.relative(), spongos, linked_msg_address);
 
+        // Post permission check to remove permisisons if this was the last msg allowed
+        self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission, u128::MAX).await?;
+
         // Store message content into stores
-        self.set_latest_link(topic, address.relative());
+        self.set_latest_link(topic.clone(), address.relative());
 
         Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }

@@ -67,7 +67,7 @@ where
             .clone();
 
         permission =
-            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission)?;
+            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission, self.latest_timestamp().await?).await?.1;
 
         if permission.is_readonly() {
             return Err(Error::WrongRole(
@@ -128,8 +128,12 @@ where
             .cursor_store
             .insert_cursor(&topic, permission.clone(), new_cursor);
         self.store_spongos(rel_address, spongos, link_to);
+        // Post permission check to remove permisisons if this was the last msg allowed
+        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  self.latest_timestamp().await?).await?;
         // Update Branch Links
         self.set_latest_link(topic, message_address.relative());
+        
+
         Ok(SendResponse::new(message_address, send_response))
     }
 }
@@ -163,12 +167,20 @@ impl<T> User<T> {
             .get_permission(&topic, publisher)
             .ok_or(Error::NoCursor(topic.clone()))?
             .clone();
+    
         // From the point of view of cursor tracking, the message exists, regardless of the validity or
         // accessibility to its content. Therefore we must update the cursor of the publisher before
         // handling the message
         self.state
             .cursor_store
-            .insert_cursor(&topic, permission, preparsed.header().sequence());
+            .insert_cursor(&topic, permission.clone(), preparsed.header().sequence());
+
+        // Check pre for time-related permissions
+        let (changed, permission) =
+            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission.clone(),  preparsed.header().timestamp as u128).await?;
+        if changed {
+            // lost permission
+        }
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -191,6 +203,8 @@ impl<T> User<T> {
 
         // Store spongos
         self.store_spongos(address.relative(), spongos, linked_msg_address);
+        // Post permission check to remove permisisons if this was the last msg allowed
+        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  u128::MAX).await?;
 
         // Store message content into stores
         self.set_latest_link(topic, address.relative());
