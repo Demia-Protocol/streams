@@ -181,6 +181,11 @@ where
             .ok_or(Error::AddressError("No message found", address))?;
         Ok(vec![msg.try_into()?])
     }
+
+    async fn latest_timestamp(&self) -> Result<u128> {
+        let network_info = self.get_network_info().await?;
+        Ok(network_info.status.latest_milestone.timestamp as u128)
+    }
 }
 
 fn nonce(data: &[u8], target_score: f64) -> Result<u64> {
@@ -221,6 +226,9 @@ struct NetworkInfo {
     /// Protocol Info, contains the pow score
     #[serde(rename = "protocol")]
     protocol: Protocol,
+    /// Network status, containing milestones
+    #[serde(rename = "status")]
+    status: Status,
 }
 
 #[derive(Clone, Deserialize)]
@@ -234,6 +242,21 @@ struct Protocol {
 struct Tips {
     /// Tips to be used as parents in block
     tips: Vec<String>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Status {
+    /// Latest seen milestone
+    latest_milestone: Milestone,
+    confirmed_milestone: Milestone,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Milestone {
+    index: u32,
+    timestamp: u64
 }
 
 #[derive(Serialize, Deserialize)]

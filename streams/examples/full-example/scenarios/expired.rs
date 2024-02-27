@@ -96,9 +96,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     print_user("Subscriber A", &subscriber_a);
     assert_eq!(subscriber_a.sync().await?, 1);
 
-    println!("> Author gives Subscriber A write permission for 5 minutes");
+    println!("> Author gives Subscriber A write permission for 30 seconds");
     assert_eq!(author.sync().await?, 1);
-    let write_permission_duration = PermissionDuration::seconds_from_now(10); // 5 minutes in seconds
+    let write_permission_duration = PermissionDuration::seconds_from_now(30);
     author
         .send_keyload(
             BRANCH1,
@@ -117,8 +117,8 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         "Subscriber A should be able to send a signed packet before permission expiration"
     );
 
-    // Wait for 6 minutes to ensure the permission is expired
-    tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
+    // Wait to ensure the permission is expired with added delay for milestones
+    wait_until(write_permission_duration.timestamp() + 10).await;
 
     println!("> Subscriber A attempts to send a signed packet (should fail)");
     let result = subscriber_a
@@ -130,4 +130,22 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         "Subscriber A should be not able to send a signed packet after permission expiration"
     );
     Ok(())
+}
+
+async fn wait_until(target_timestamp: u64) {
+    // Get the current timestamp in milliseconds
+    let current_timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .expect("Failed to get system time")
+        .as_millis() as u64;
+
+    // Calculate the duration to sleep
+    let sleep_duration = if current_timestamp < target_timestamp {
+        tokio::time::Duration::from_millis(target_timestamp - current_timestamp)
+    } else {
+        tokio::time::Duration::from_millis(0)
+    };
+
+    // Sleep until the target timestamp
+    tokio::time::sleep(sleep_duration).await;
 }

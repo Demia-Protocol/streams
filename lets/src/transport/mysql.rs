@@ -134,6 +134,13 @@ where
         let msg = self.retrieve_message(address).await?;
         Ok(vec![msg.into()])
     }
+
+    async fn latest_timestamp(&self) -> Result<u128> {
+        let start = std::time::SystemTime::now();
+        Ok(start
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards").as_millis())
+    }
 }
 
 #[derive(sqlx::FromRow, Clone, Serialize, Deserialize, Default, Debug)]

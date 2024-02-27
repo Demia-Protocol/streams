@@ -101,4 +101,11 @@ where
             .cloned()
             .ok_or(Error::AddressError("No message found", address))
     }
+
+    async fn latest_timestamp(&self) -> Result<u128> {
+        let start = std::time::SystemTime::now();
+        Ok(start
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards").as_millis())
+    }
 }

@@ -455,6 +455,83 @@ impl<T> User<T> {
         ctx.unwrap(&mut state).await.map_err(Error::Spongos)?;
         Ok(User { transport, state })
     }
+
+    pub(crate) fn update_permissions(
+        &mut self,
+        topic: &Topic,
+        permission: Permissioned<Identifier>,
+        cursor: Option<usize>,
+    ) {
+        let cursor = cursor.unwrap_or(INIT_MESSAGE_NUM);
+
+        if let Some(c) = self
+            .state
+            .cursor_store
+            .get_cursor(&topic, permission.identifier())
+        {
+            self.state.cursor_store.insert_cursor(&topic, permission, c);
+        } else {
+            self.state
+                .cursor_store
+                .insert_cursor(&topic, permission, cursor);
+        }
+    }
+
+    pub(crate) async fn check_and_update_permission(
+        &mut self,
+        action: PermissionType,
+        topic: &Topic,
+        mut permission: Permissioned<Identifier>,
+        time: u128 //TODO: Find a way to prevent calling this always
+    ) -> Result<(bool, Permissioned<Identifier>)> {
+        if action == PermissionType::Read {
+            return Ok((false, permission));
+        }
+
+        let mut change = false;
+        if let Permissioned::ReadWrite(_, duration) = permission {
+            change = match duration {
+                PermissionDuration::Perpetual => false,
+                PermissionDuration::Unix(t) => time > (t as u128),
+                PermissionDuration::NumBranchMsgs(n) => {
+                    let num: u32 = self
+                        .state
+                        .cursor_store
+                        .get_cursor(topic, &*permission)
+                        .unwrap_or(0)
+                        .try_into()
+                        .unwrap();
+                    println!("NumBranchMsgs {}", num);
+                    (num - INIT_MESSAGE_NUM as u32) > n
+                }
+                PermissionDuration::NumPublishedmsgs(n) => {
+                    let num: u32 = self
+                        .state
+                        .cursor_store
+                        .total_msg_for_id(&*permission)
+                        .try_into()
+                        .unwrap();
+                    println!("NumPublishedmsgs {}", num);
+                    num > n
+                }
+            };
+        };
+
+        if change {
+            permission = Permissioned::Read(permission.identifier().clone());
+            // TODO: set old cursor and update when permisisons get updated to write again
+            self.update_permissions(topic, permission.clone(), None);
+        }
+        Ok((change, permission))
+    }
+}
+
+impl<'a, T> User<T> 
+where T: Transport<'a>,
+{
+    pub(crate) async fn latest_timestamp(&self) -> Result<u128> {
+        self.transport().latest_timestamp().await.map_err(|e| Error::PreCheck("time", e.to_string()))
+    }
 }
 
 impl<T> User<T>
@@ -587,12 +664,6 @@ where
         self.state.base_branch = topic;
 
         Ok(SendResponse::new(stream_address, send_response))
-    }
-
-    fn last_timestamp(&self) -> u64 {
-        let now = chrono::Utc::now();
-        let milis: u64 = now.timestamp_millis().try_into().unwrap();
-        milis
     }
 
     /// Create a new [`MessageBuilder`] instance.

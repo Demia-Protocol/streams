@@ -22,11 +22,11 @@ use crate::id::identifier::Identifier;
 pub enum PermissionDuration {
     /// Indefinite `ReadWrite`
     Perpetual,
-    /// `ReadWrite` until the internal `Unix` timestamp elapses
+    /// `ReadWrite` until (including) the internal `Unix` timestamp elapses
     Unix(u64),
-    /// `ReadWrite` until the specified number of messages has been parsed from the branch
+    /// `ReadWrite` until (including) the specified number of messages has been parsed from the branch
     NumBranchMsgs(u32),
-    /// `ReadWrite` until the specified number of messages has been parsed from the channel
+    /// `ReadWrite` until (including) the specified number of messages has been parsed from the channel
     NumPublishedmsgs(u32),
 }
 
@@ -35,6 +35,30 @@ impl PermissionDuration {
         let now = chrono::Utc::now();
         let milis: u64 = now.timestamp_millis().try_into().unwrap();
         Self::Unix(milis + secs * 1000_u64)
+    }
+
+    pub fn timestamp(self) -> u64 {
+        if let PermissionDuration::Unix(t) = self {
+            t
+        } else {
+            panic!("Not a Unix type")
+        }
+    }
+
+    pub fn num_branches(self) -> u32 {
+        if let PermissionDuration::NumBranchMsgs(t) = self {
+            t
+        } else {
+            panic!("Not a NumBranchMsgs type")
+        }
+    }
+
+    pub fn num_published_messages(self) -> u32 {
+        if let PermissionDuration::NumPublishedmsgs(t) = self {
+            t
+        } else {
+            panic!("Not a NumPublishedmsgs type")
+        }
     }
 }
 
