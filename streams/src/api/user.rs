@@ -52,7 +52,7 @@ use crate::{
         announcement, branch_announcement, keyload, message_types, signed_packet, subscription, tagged_packet,
         unsubscription,
     },
-    Error, Result,
+    Error, Result, Selector,
 };
 
 const ANN_MESSAGE_NUM: usize = 0; // Announcement is always the first message of authors
@@ -893,6 +893,59 @@ where
             .try_fold(0, |n, _| future::ok(n + 1))
             .await
             .map_err(Error::Messages)
+    }
+
+    pub async fn sync_from(&mut self, selector: &Selector, topic: impl Into<Topic>) -> Result<Messages<T>> {
+        let topic = topic.into();
+        let addr = AppAddr::gen(&self.state.author_identifier.as_ref().unwrap(), &self.state.base_branch);
+        let mut latest = Address::new(addr, self.get_latest_link(&topic).ok_or_else(|| {
+            Error::TopicNotFound(topic.clone())
+        })?);
+
+        let mut msg = self
+            .transport
+            .recv_message(latest)
+            .await
+            .map_err(|e| Error::Transport(latest, "receive message", e))?;
+        let mut preparsed: PreparsedMessage = msg.parse_header().await
+            .map_err(|e| Error::Unwrapping("header", latest, e))?;
+        let mut header = preparsed.header();
+
+        let mut msgs = HashMap::new();
+        
+        // Check if the selector precedes the latest message already, 
+        // meaning we need to go forward before retuning any messages.
+        let mut forward = selector.is_from_header(&header, Some(latest)); 
+
+        // sync up only if we really need to, to prevent double fetching
+        if forward {
+            // Only fetch until we meet our reqs
+            while let (false, Some(Ok(m))) = (forward, self.messages().next().await) {
+                // Add to the cache for later in order not to fetch twice
+                msgs.insert(m.address().relative(), m.clone());
+                latest = m.address();
+                header = preparsed.header();
+                forward = !selector.is_from_header(&header, Some(latest)); 
+            };
+        }
+
+        while selector.is_from_header(header, Some(latest)) && header.linked_msg_address.is_some() {
+            latest = Address::new(addr, header.linked_msg_address.unwrap());
+
+            msg = self
+                .transport
+                .recv_message(latest)
+                .await
+                .map_err(|e| Error::Transport(latest, "receive message", e))?;
+            preparsed = msg.parse_header().await
+                .map_err(|e| Error::Unwrapping("header", latest, e))?;
+            header = preparsed.header();
+        };
+
+        let start = (topic, header.publisher().clone(), header.sequence);
+        let messages_stream = Messages::new_with_cache(self, msgs, Some(start));
+
+        Ok(messages_stream)
     }
 
     /// Iteratively fetches all the pending messages from the transport
