@@ -235,7 +235,7 @@ where
     }
 }
 
-impl<T> User<T> {
+impl<'a, T> User<T> where T: Transport<'a> {
     /// Processes a keyload message, updating store to include the contained list of
     /// [permissions](`Permissioned`). All keyload messages are linked to the announcement
     /// message to ensure they can always be read by a [`User`] that can sequence up to it.

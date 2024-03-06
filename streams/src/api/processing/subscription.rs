@@ -109,7 +109,7 @@ where
     }
 }
 
-impl<T> User<T> {
+impl<'a, T> User<T> where T: Transport<'a> {
     /// Processes a [`User`] subscription message, storing the subscriber [`Identifier`].
     ///
     /// # Arguments:

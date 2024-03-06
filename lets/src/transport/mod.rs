@@ -57,9 +57,7 @@ pub trait Transport<'a> {
         }
     }
 
-    async fn latest_timestamp(&self) -> Result<u128>
-    where
-        'a: 'async_trait;
+    async fn latest_timestamp(&self) -> Result<u128>;
 }
 
 /// Localised mapping for tests and simulations

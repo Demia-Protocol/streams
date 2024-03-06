@@ -67,7 +67,7 @@ where
             .clone();
 
         permission =
-            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission, self.latest_timestamp().await?).await?.1;
+            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission, None).await?.1;
 
         if permission.is_readonly() {
             return Err(Error::WrongRole(
@@ -129,7 +129,7 @@ where
             .insert_cursor(&topic, permission.clone(), new_cursor);
         self.store_spongos(rel_address, spongos, link_to);
         // Post permission check to remove permisisons if this was the last msg allowed
-        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  self.latest_timestamp().await?).await?;
+        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  None).await?;
         // Update Branch Links
         self.set_latest_link(topic, message_address.relative());
         
@@ -138,7 +138,7 @@ where
     }
 }
 
-impl<T> User<T> {
+impl<'a, T> User<T> where T: Transport<'a> + Send {
     /// Processes a signed packet message, retrieving the public and masked payloads, and verifying
     /// the message signature against the publisher [`Identifier`].
     ///
@@ -177,7 +177,7 @@ impl<T> User<T> {
 
         // Check pre for time-related permissions
         let (changed, permission) =
-            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission.clone(),  preparsed.header().timestamp as u128).await?;
+            self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission.clone(),  Some(preparsed.header().timestamp as u128)).await?;
         if changed {
             // lost permission
         }
@@ -204,7 +204,7 @@ impl<T> User<T> {
         // Store spongos
         self.store_spongos(address.relative(), spongos, linked_msg_address);
         // Post permission check to remove permisisons if this was the last msg allowed
-        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  u128::MAX).await?;
+        self.check_and_update_permission(MessageType::SignedPacket.into(), &topic, permission,  Some(u128::MAX)).await?;
 
         // Store message content into stores
         self.set_latest_link(topic, address.relative());

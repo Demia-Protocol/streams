@@ -98,7 +98,7 @@ where
     }
 }
 
-impl<T> User<T> {
+impl<'a, T> User<T> where T: Transport<'a> {
     /// Processes a [`User`] unsubscription message, removing the subscriber [`Identifier`] from
     /// store.
     ///

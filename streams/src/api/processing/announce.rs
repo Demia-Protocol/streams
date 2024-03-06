@@ -145,7 +145,7 @@ where
     }
 }
 
-impl<T> User<T> {
+impl<'a, T> User<T> where T: Transport<'a> {
     /// Processes an announcement message, binding a [`User`] to the stream announced in the
     /// message.
     ///

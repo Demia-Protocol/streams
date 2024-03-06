@@ -367,36 +367,7 @@ impl<T> User<T> {
         self.state.cursor_store.get_latest_link(topic)
     }
 
-    /// Parse and process a [`TransportMessage`] dependent on its type.
-    ///
-    /// # Arguments
-    /// * `address`: The [`Address`] of the message to process
-    /// * `msg`: The raw [`TransportMessage`]
-    pub(crate) async fn handle_message(
-        &mut self,
-        address: Address,
-        msg: TransportMessage,
-    ) -> Result<Message>
-    where
-        T: Send,
-    {
-        let preparsed = msg
-            .parse_header()
-            .await
-            .map_err(|e| Error::Unwrapping("header", address, e))?;
-
-        match preparsed.header().message_type().try_into()? {
-            MessageType::Announcement => self.handle_announcement(address, preparsed).await,
-            MessageType::BranchAnnouncement => {
-                self.handle_branch_announcement(address, preparsed).await
-            }
-            MessageType::Subscription => self.handle_subscription(address, preparsed).await,
-            MessageType::Unsubscription => self.handle_unsubscription(address, preparsed).await,
-            MessageType::Keyload => self.handle_keyload(address, preparsed).await,
-            MessageType::SignedPacket => self.handle_signed_packet(address, preparsed).await,
-            MessageType::TaggedPacket => self.handle_tagged_packet(address, preparsed).await,
-        }
-    }
+    
 
     /// Creates an encrypted, serialised representation of a [`User`] `State` for backup and
     /// recovery.
@@ -455,6 +426,40 @@ impl<T> User<T> {
         ctx.unwrap(&mut state).await.map_err(Error::Spongos)?;
         Ok(User { transport, state })
     }
+}
+
+impl<'a, T> User<T> where T: Transport<'a> {
+
+    /// Parse and process a [`TransportMessage`] dependent on its type.
+    ///
+    /// # Arguments
+    /// * `address`: The [`Address`] of the message to process
+    /// * `msg`: The raw [`TransportMessage`]
+    pub(crate) async fn handle_message(
+        &mut self,
+        address: Address,
+        msg: TransportMessage,
+    ) -> Result<Message>
+    where
+        T: Send,
+    {
+        let preparsed = msg
+            .parse_header()
+            .await
+            .map_err(|e| Error::Unwrapping("header", address, e))?;
+
+        match preparsed.header().message_type().try_into()? {
+            MessageType::Announcement => self.handle_announcement(address, preparsed).await,
+            MessageType::BranchAnnouncement => {
+                self.handle_branch_announcement(address, preparsed).await
+            }
+            MessageType::Subscription => self.handle_subscription(address, preparsed).await,
+            MessageType::Unsubscription => self.handle_unsubscription(address, preparsed).await,
+            MessageType::Keyload => self.handle_keyload(address, preparsed).await,
+            MessageType::SignedPacket => self.handle_signed_packet(address, preparsed).await,
+            MessageType::TaggedPacket => self.handle_tagged_packet(address, preparsed).await,
+        }
+    }
 
     /// The function `has_permission` checks if the user has the required permission for a
     /// specific action on a given topic.
@@ -511,8 +516,10 @@ impl<T> User<T> {
         action: PermissionType,
         topic: &Topic,
         mut permission: Permissioned<Identifier>,
-        time: u128 //TODO: Find a way to prevent calling this always
-    ) -> Result<(bool, Permissioned<Identifier>)> {
+        time: Option<u128> // Intended to use with the header timestamp
+    ) -> Result<(bool, Permissioned<Identifier>)> 
+    where
+        T: Send, {
         if action == PermissionType::Read {
             return Ok((false, permission));
         }
@@ -521,7 +528,10 @@ impl<T> User<T> {
         if let Permissioned::ReadWrite(_, duration) = permission {
             change = match duration {
                 PermissionDuration::Perpetual => false,
-                PermissionDuration::Unix(t) => time > (t as u128),
+                PermissionDuration::Unix(t) => match time {
+                    Some(time) => time > (t as u128),
+                    None => self.latest_timestamp().await? > (t as u128),
+                }
                 PermissionDuration::NumBranchMsgs(n) => {
                     let num: u32 = self
                         .state
@@ -530,7 +540,6 @@ impl<T> User<T> {
                         .unwrap_or(0)
                         .try_into()
                         .unwrap();
-                    println!("NumBranchMsgs {}", num);
                     (num - INIT_MESSAGE_NUM as u32) > n
                 }
                 PermissionDuration::NumPublishedmsgs(n) => {
@@ -540,7 +549,6 @@ impl<T> User<T> {
                         .total_msg_for_id(&*permission)
                         .try_into()
                         .unwrap();
-                    println!("NumPublishedmsgs {}", num);
                     num > n
                 }
             };
@@ -553,11 +561,7 @@ impl<T> User<T> {
         }
         Ok((change, permission))
     }
-}
 
-impl<'a, T> User<T> 
-where T: Transport<'a>,
-{
     pub(crate) async fn latest_timestamp(&self) -> Result<u128> {
         self.transport().latest_timestamp().await.map_err(|e| Error::PreCheck("time", e.to_string()))
     }
@@ -565,7 +569,7 @@ where T: Transport<'a>,
 
 impl<T> User<T>
 where
-    T: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync,
 {
     /// Receive a raw message packet using the internal [`Transport`] client
     ///
