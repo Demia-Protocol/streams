@@ -378,11 +378,17 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_announcement(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
         // Check Topic
         let publisher = preparsed.header().publisher().clone();
 
         // Unwrap message
         let announcement = announcement::Unwrap::default();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         let (message, spongos) = preparsed
             .unwrap(announcement)
             .await
@@ -411,7 +417,7 @@ impl<T> User<T> {
         self.state.base_branch = topic.clone();
         self.state.stream_address = Some(address);
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Processes a branch announcement message, creating a new branch in [`CursorStore`], carrying
@@ -421,6 +427,8 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_branch_announcement(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         // Retrieve header values
         let prev_topic = self
             .topic_by_hash(preparsed.header().topic_hash())
@@ -440,6 +448,10 @@ impl<T> User<T> {
             .clone();
         self.state.cursor_store.insert_cursor(&prev_topic, permission, cursor);
 
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         // Unwrap message
         let linked_msg_address = preparsed
             .header()
@@ -450,7 +462,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let branch_announcement = branch_announcement::Unwrap::new(&mut linked_msg_spongos);
@@ -477,7 +489,7 @@ impl<T> User<T> {
         // Update branch links
         self.set_latest_link(new_topic.clone(), address.relative());
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Processes a [`User`] subscription message, storing the subscriber [`Identifier`].
@@ -486,7 +498,13 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_subscription(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         // Cursor is not stored, as cursor is only tracked for subscribers with write permissions
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -498,7 +516,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let user_id = self.identity_mut().ok_or(Error::NoIdentity("Derive a secret key"))?;
@@ -515,7 +533,7 @@ impl<T> User<T> {
 
         // Store message content into stores
         let subscriber_identifier = message.payload().content().subscriber_identifier().clone();
-        let final_message = Message::from_lets_message(address, message);
+        let final_message = Message::from_lets_message(address, pk, sig, raw, message);
         self.add_subscriber(subscriber_identifier);
 
         Ok(final_message)
@@ -528,7 +546,12 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_unsubscription(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
         // Cursor is not stored, as user is unsubscribing
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -540,7 +563,7 @@ impl<T> User<T> {
                 // Spongos must be cloned because wrapping mutates it
                 *spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let unsubscription = unsubscription::Unwrap::new(&mut linked_msg_spongos);
@@ -555,7 +578,7 @@ impl<T> User<T> {
         // Store message content into stores
         self.remove_subscriber(message.payload().content().subscriber_identifier());
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Processes a keyload message, updating store to include the contained list of
@@ -566,6 +589,8 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_keyload(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         let stream_address = self.stream_address().ok_or(Error::NoStream("handling a keyload"))?;
 
         let topic = self
@@ -608,6 +633,11 @@ impl<T> User<T> {
             .collect();
 
         let user_id = self.state.user_id.as_mut();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         // TODO: Remove Psk from Identity and Identifier, and manage it as a complementary permission
         let keyload = keyload::Unwrap::new(
             &mut announcement_spongos,
@@ -636,7 +666,7 @@ impl<T> User<T> {
         }
 
         // Have to make message before setting branch links due to immutable borrow in keyload::unwrap
-        let final_message = Message::from_lets_message(address, message);
+        let final_message = Message::from_lets_message(address, pk, sig,raw, message);
 
         // Store message content into stores
         for subscriber in subscribers {
@@ -659,10 +689,17 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_signed_packet(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         let topic = self
             .topic_by_hash(preparsed.header().topic_hash())
             .ok_or(Error::UnknownTopic(*preparsed.header().topic_hash()))?;
         let publisher = preparsed.header().publisher();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         let permission = self
             .state
             .cursor_store
@@ -686,7 +723,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let signed_packet = signed_packet::Unwrap::new(&mut linked_msg_spongos);
@@ -700,7 +737,7 @@ impl<T> User<T> {
 
         // Store message content into stores
         self.set_latest_link(topic, address.relative());
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Processes a tagged packet message, retrieving the public and masked payloads.
@@ -709,10 +746,17 @@ impl<T> User<T> {
     /// * `address`: The [`Address`] of the message to be processed
     /// * `preparsed`: The [`PreparsedMessage`] to be processed
     async fn handle_tagged_packet(&mut self, address: Address, preparsed: PreparsedMessage) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         let topic = self
             .topic_by_hash(preparsed.header().topic_hash())
             .ok_or(Error::UnknownTopic(*preparsed.header().topic_hash()))?;
         let publisher = preparsed.header().publisher();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         let permission = self
             .state
             .cursor_store
@@ -736,7 +780,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let tagged_packet = tagged_packet::Unwrap::new(&mut linked_msg_spongos);
@@ -751,7 +795,7 @@ impl<T> User<T> {
         // Store message content into stores
         self.set_latest_link(topic, address.relative());
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Creates an encrypted, serialised representation of a [`User`] `State` for backup and
@@ -1528,15 +1572,6 @@ where
     }
 
     async fn send_message(&mut self, address: Address, msg: TransportMessage) -> Result<TSR> {
-        /*#[cfg(not(feature = "did"))]
-        {
-            self.transport
-                .send_message(address, msg)
-                .await
-                .map_err(|e| Error::Transport(address, "send announce message", e))
-        }
-        #[cfg(feature = "did")]
-        {*/
             let identity = self.identity_mut().ok_or(Error::NoIdentity("send messages"))?;
             // TODO: store pubkey in user instance for easy retrieval
             let sig = identity

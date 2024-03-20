@@ -116,7 +116,6 @@ where
     /// # Arguments
     /// * `address`: The address of the message.
     /// * `msg`: Message - The message to send.
-    //#[cfg(feature = "did")]
     async fn send_message(
         &mut self,
         address: Address,
@@ -153,37 +152,6 @@ where
             .await?;
         Ok(response)
     }
-
-    /*#[cfg(not(feature = "did"))]
-    async fn send_message(&mut self, address: Address, msg: Message) -> Result<SendResponse>
-    where
-        Message: 'async_trait + Send,
-    {
-        let network_info = self.get_network_info().await?;
-        let tips = self.get_tips().await?;
-
-        let mut block = Block::new(
-            tips,
-            address.to_msg_index().to_vec(),
-            msg.as_ref().to_vec(),
-            vec![],
-            vec![],
-        );
-        let message_bytes = serde_json::to_vec(&block)?;
-        block.set_nonce(nonce(&message_bytes, network_info.protocol.min_pow_score as f64)?);
-
-        let path = "api/core/v2/blocks";
-        let response: SendResponse = self
-            .client
-            .post(format!("{}/{}", self.node_url, path))
-            .header("Content-Type", "application/json")
-            .body(message_bytes)
-            .send()
-            .await?
-            .json()
-            .await?;
-        Ok(response)
-    }*/
 
     /// Retrieves a message indexed at the provided [`Address`] from the tangle. Errors if no
     /// messages are found.
@@ -322,7 +290,11 @@ pub struct SentMessageResponse {
 impl TryFrom<Block> for TransportMessage {
     type Error = crate::error::Error;
     fn try_from(message: Block) -> Result<Self> {
-        Ok(Self::new(prefix_hex::decode(message.payload.data.clone())?))
+        Ok(
+            Self::new(prefix_hex::decode(message.payload.data.clone())?)
+                .with_pk(prefix_hex::decode(message.payload.pub_key)?)
+                .with_sig(prefix_hex::decode(message.payload.signature)?)
+        )
     }
 }
 
@@ -340,8 +312,7 @@ mod tests {
 
     #[tokio::test]
     async fn send_and_recv_message() -> Result<()> {
-        let mut client = Client::new("https://chrysalis-nodes.iota.org");
-        let msg = TransportMessage::new(vec![12; 1024]);
+        let mut client = Client::new("http://nodes.02.demia-testing-domain.com:14102");
         let address = Address::new(
             AppAddr::default(),
             MsgId::gen(
@@ -351,7 +322,14 @@ mod tests {
                 Utc::now().timestamp_millis() as usize,
             ),
         );
-        let _: serde_json::Value = client.send_message(address, msg.clone()).await?;
+        let body = vec![12; 50];
+        let key = crypto::signatures::ed25519::SecretKey::generate().unwrap();
+        let pk = key.public_key();
+        let sig = key.sign(&body);
+        let msg = TransportMessage::new(body)
+            .with_pk(pk.to_bytes().to_vec())
+            .with_sig(sig.to_bytes().to_vec());
+        let _: serde_json::Value = client.send_message(address, msg.clone(), pk, sig).await?;
 
         let response = client.recv_message(address).await?;
         assert_eq!(msg, response);

@@ -14,7 +14,11 @@ use crate::{
 
 /// Binary network Message representation.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct TransportMessage(Vec<u8>);
+pub struct TransportMessage{
+    body: Vec<u8>,
+    pk: Vec<u8>,
+    sig: Vec<u8>,
+}
 
 impl TransportMessage {
     /// Creates a new [`TransportMessage`] wrapper for the provided bytes
@@ -22,17 +26,39 @@ impl TransportMessage {
     /// # Arguments
     /// * `body`: The body of the message
     pub fn new(body: Vec<u8>) -> Self {
-        Self(body)
+        Self{body, pk: vec![], sig: vec![]}
+    }
+
+    /// Insert public key
+    pub fn with_pk(mut self, pk: Vec<u8>) -> Self {
+        self.pk = pk;
+        self
+    }
+
+    /// Insert signature
+    pub fn with_sig(mut self, sig: Vec<u8>) -> Self {
+        self.sig = sig;
+        self
     }
 
     /// Returns a reference to the body of the message
-    pub(crate) fn body(&self) -> &Vec<u8> {
-        &self.0
+    pub fn body(&self) -> &Vec<u8> {
+        &self.body
+    }
+
+    /// Returns a reference to the public key of the message
+    pub fn pk(&self) -> &Vec<u8> {
+        &self.pk
+    }
+
+    /// Returns a reference to the signature of the message
+    pub fn sig(&self) -> &Vec<u8> {
+        &self.sig
     }
 
     /// Consumes the [`TransportMessage`], returning the body of the message
     pub(crate) fn into_body(self) -> Vec<u8> {
-        self.0
+        self.body
     }
 }
 
