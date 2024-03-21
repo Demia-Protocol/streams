@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Binary network Message representation.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default, serde::Serialize, serde::Deserialize)]
 pub struct TransportMessage{
     body: Vec<u8>,
     pk: Vec<u8>,
