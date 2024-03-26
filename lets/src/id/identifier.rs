@@ -394,7 +394,7 @@ where
                         //  The location of sender's xkeys in stronghold
                         let sender_location = Location::generic(STREAMS_VAULT, sender_method.id().to_string());
                         // Get public key for encryption
-                        let xkey = iota_client::crypto::keys::x25519::PublicKey::try_from_slice(
+                        let xkey = x25519::PublicKey::try_from_slice(
                             &receiver_method
                                 .data()
                                 .try_decode()

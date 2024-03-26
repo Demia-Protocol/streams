@@ -25,9 +25,9 @@ tangle-client = ["lets/tangle-client"]
 bucket = ["lets/bucket"]
 # Enable re-export of wasm-compatible IOTA-Tangle transport client from LETS (incompatile with `tangle-client` feature due to `iota-client/async` using `tokio`)
 tangle-client-wasm = ["lets/tangle-client-wasm"]
-#Enable MySql Client
+# Enable MySql Client
 mysql-client = ["lets/mysql-client"]
-#Enable MySql Client
+# Serde feature for bindings and general de/serialization
 serde = ["lets/serde", "spongos/serde", "dep:serde", "dep:serde_json"]
 
 [dependencies]
@@ -36,7 +36,7 @@ lets = {path = "../lets", default-features = false}
 spongos = {path = "../spongos", default-features = false}
 
 # IOTA dependencies
-iota-crypto = {version = "0.15.3", default-features = false, features = ["x25519"] }
+iota-crypto = {version = "0.23.1", default-features = false, features = ["x25519"] }
 
 # 3rd-party dependencies
 anyhow = {version = "1.0", default-features = false}
