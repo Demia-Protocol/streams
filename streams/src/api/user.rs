@@ -60,21 +60,25 @@ const SUB_MESSAGE_NUM: usize = 0; // Subscription is always the first message of
 const INIT_MESSAGE_NUM: usize = 1; // First non-reserved message number
 
 /// The state of a user, mapping publisher cursors and link states for message processing.
-#[derive(PartialEq, Eq, Default)]
+#[derive(PartialEq, Eq, Default, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct State {
     /// Users' [`Identity`] information, contains keys and logic for signing and verification.
     ///
     /// None if the user is not created with an identity
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     user_id: Option<Identity>,
 
     /// [`Address`] of the stream announcement message.
     ///
     /// None if channel is not created or user is not subscribed.
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     stream_address: Option<Address>,
 
     /// [`Identifier`] of the channel author.
     ///
     /// None if channel is not created or user is not subscribed.
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     author_identifier: Option<Identifier>,
 
     /// Users' trusted public keys together with additional sequencing info: (msgid, seq_no) mapped
@@ -1888,3 +1892,50 @@ impl<T> PartialEq for User<T> {
 /// this fact is that two users with the same identity but different transport configurations are
 /// considered equal
 impl<T> Eq for User<T> {}
+
+impl<T> User<T> {
+    pub fn serialize1(&self) -> Result<String> {
+        serde_json::to_string(&self.state).map_err(|e|{
+            Error::External(e.into())
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lets::transport::bucket;
+
+    use crate::{
+        api::user::User,
+        Result,
+    };
+
+    type Transport = bucket::Client;
+
+    #[tokio::test]
+    async fn serialize(
+    ) -> Result<()> {
+        let psk = lets::id::Psk::from_seed(b"Psk1");
+        let user = User::builder().with_transport(Transport::new()).with_psk(psk.to_pskid(), psk).build();
+
+        let serialized: serde_json::Value = r#"{
+            "cursor_store":{},
+            "psk_store":{
+                "8cea20dcc19c4bd897f09170bf748f38":[177,226,96,81,147,120,157,43,52,194,47,236,77,98,111,21,108,228,72,21,68,191,115,34,62,204,28,60,195,250,214,157]
+            },
+            "subscribers":[],
+            "spongos_store":{},
+            "base_branch":"",
+            "lean":false,
+            "topics":[]
+        }"#.parse().unwrap();
+        
+        let parsed_user = user.serialize1().unwrap().parse::<serde_json::Value>().unwrap();
+
+        // serialize then deserialize so the order doesnt matter
+        assert_eq!(serialized, parsed_user);
+        assert_eq!(user.state, serde_json::from_value(parsed_user).unwrap());
+        Ok(())
+    }
+
+}

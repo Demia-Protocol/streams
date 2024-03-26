@@ -1,8 +1,5 @@
 // Rust
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-};
+use alloc::boxed::Box;
 #[cfg(feature = "did")]
 use core::ops::Deref;
 #[cfg(feature = "did")]
@@ -54,6 +51,7 @@ use crate::{
 
 /// User Identification types
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Identifier {
     /// Ed25519 Keypair based identifier
     Ed25519(Ed25519Pub),
@@ -152,7 +150,7 @@ impl Default for Identifier {
     fn default() -> Self {
         #[cfg(not(feature = "did"))]
         {
-            let default_public_key = ed25519::PublicKey::try_from_bytes([0; ed25519::PUBLIC_KEY_LENGTH]).unwrap();
+            let default_public_key = ed25519::PublicKey::try_from_bytes([0; ed25519::PublicKey::LENGTH]).unwrap();
             Identifier::from(default_public_key)
         }
         #[cfg(feature = "did")]
@@ -396,7 +394,7 @@ where
                         //  The location of sender's xkeys in stronghold
                         let sender_location = Location::generic(STREAMS_VAULT, sender_method.id().to_string());
                         // Get public key for encryption
-                        let xkey = x25519::PublicKey::try_from_slice(
+                        let xkey = iota_client::crypto::keys::x25519::PublicKey::try_from_slice(
                             &receiver_method
                                 .data()
                                 .try_decode()

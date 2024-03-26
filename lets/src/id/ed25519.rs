@@ -21,6 +21,25 @@ pub type Ed25519Sig = ed25519::Signature;
 /// Wrapper for [`ed25519::SecretKey`]
 pub struct Ed25519(ed25519::SecretKey);
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for Ed25519 {
+    fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        // TODO: We probably dont want to serialize this
+        todo!()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Ed25519 {
+    fn deserialize<D>(_: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+        todo!()
+    }
+}
+
 impl Ed25519 {
     /// Creates a new [`Ed25519`] wrapper around the provided secret key
     ///
@@ -43,9 +62,7 @@ impl Ed25519 {
             seed,
         )))
     }
-}
 
-impl Ed25519 {
     /// Returns a reference to the inner [`ed25519::SecretKey`]
     pub(crate) fn inner(&self) -> &ed25519::SecretKey {
         &self.0

@@ -229,7 +229,7 @@ fn bytes() {
 }
 
 fn absorb_ed25519<F: PRP + Default>() -> Result<()> {
-    let secret = ed25519::SecretKey::from_bytes([7; ed25519::SECRET_KEY_LENGTH]);
+    let secret = ed25519::SecretKey::from_bytes(&[7; ed25519::SecretKey::LENGTH]);
 
     let tag_wrap = Bytes::new(vec![3u8; 17]);
     let mut tag_unwrap = Bytes::default();

@@ -17,7 +17,7 @@ use hashbrown::HashMap;
 // Streams
 use lets::{
     address::{Address, MsgId},
-    id::{Identifier, Permissioned},
+    id::Identifier,
     message::{Topic, TransportMessage, HDF},
     transport::Transport,
 };

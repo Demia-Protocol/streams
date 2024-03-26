@@ -18,6 +18,7 @@ use crate::id::identifier::Identifier;
 
 /// Duration with which a `ReadWrite` [`Permissioned`] will be valid for
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PermissionDuration {
     /// Indefinite `ReadWrite`
     Perpetual,
@@ -84,6 +85,7 @@ where
 
 /// Used to assign Read and Write access to branches within a Stream
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Permissioned<Identifier> {
     /// Read Access for the assigned branch
     Read(Identifier),

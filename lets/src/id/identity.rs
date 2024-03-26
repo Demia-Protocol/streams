@@ -49,7 +49,8 @@ use crate::{
 
 /// Wrapper around [`Identifier`], specifying which type of [`Identity`] is being used. An
 /// [`Identity`] is the foundation of message sending and verification.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(clippy::large_enum_variant)]
 pub struct Identity {
     /// Type of User Identity
@@ -121,6 +122,7 @@ impl From<DID> for Identity {
 
 /// Wrapper for [`Identity`] details
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(clippy::large_enum_variant)]
 pub enum IdentityKind {
     /// An Ed25519 type [`Identity`] using a private key
@@ -130,12 +132,22 @@ pub enum IdentityKind {
     DID(DID),
 }
 
+impl core::fmt::Debug for IdentityKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Ed25519(_) => f.debug_tuple("Ed25519").finish(),
+            #[cfg(feature = "did")]
+            Self::DID(_) => f.debug_tuple("DID").finish(),
+        }
+    }
+}
+
 impl Default for IdentityKind {
     fn default() -> Self {
         #[cfg(not(feature = "did"))]
         {
             // unwrap is fine because we are using default
-            let signing_private_key = ed25519::SecretKey::from_bytes([0; ed25519::SECRET_KEY_LENGTH]);
+            let signing_private_key = ed25519::SecretKey::from_bytes(&[0; ed25519::SecretKey::LENGTH]);
             Self::Ed25519(Ed25519::new(signing_private_key))
         }
         #[cfg(feature = "did")]
@@ -233,9 +245,9 @@ where
         self.mask(&mut oneof)?;
         let identitykind = match oneof.inner() {
             0 => {
-                let mut ed25519_bytes = [0; ed25519::SECRET_KEY_LENGTH];
+                let mut ed25519_bytes = [0; ed25519::SecretKey::LENGTH];
                 self.mask(NBytes::new(&mut ed25519_bytes))?;
-                IdentityKind::Ed25519(ed25519::SecretKey::from_bytes(ed25519_bytes).into())
+                IdentityKind::Ed25519(ed25519::SecretKey::from_bytes(&ed25519_bytes).into())
             }
             #[cfg(feature = "did")]
             1 => {

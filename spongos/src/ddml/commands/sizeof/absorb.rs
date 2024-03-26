@@ -76,7 +76,7 @@ impl<T: AsRef<[u8]>> Absorb<NBytes<T>> for Context {
 /// Increases [`Context`] size by the fixed size of an ed25519 public key (32 bytes).
 impl Absorb<&ed25519::PublicKey> for Context {
     fn absorb(&mut self, _pk: &ed25519::PublicKey) -> Result<&mut Self> {
-        self.size += ed25519::PUBLIC_KEY_LENGTH;
+        self.size += ed25519::PublicKey::LENGTH;
         Ok(self)
     }
 }

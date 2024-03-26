@@ -112,7 +112,7 @@ impl<F: PRP, IS: io::IStream> Absorb<Bytes<&mut Vec<u8>>> for Context<IS, F> {
 /// Reads an Ed25519 public key from [`Context`].
 impl<'a, F: PRP, IS: io::IStream> Absorb<&'a mut ed25519::PublicKey> for Context<IS, F> {
     fn absorb(&mut self, public_key: &'a mut ed25519::PublicKey) -> Result<&mut Self> {
-        let mut bytes = [0u8; ed25519::PUBLIC_KEY_LENGTH];
+        let mut bytes = [0u8; ed25519::PublicKey::LENGTH];
         AbsorbContext::new(self).unwrapn(&mut bytes)?;
         match ed25519::PublicKey::try_from_bytes(bytes) {
             Ok(pk) => {

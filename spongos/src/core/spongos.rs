@@ -50,6 +50,7 @@ type Rate<F> = GenericArray<u8, <F as PRP>::RateSize>;
 
 /// State management for binary streams.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Spongos<F = KeccakF1600> {
     /// Spongos transform together with its internal state.
     s: F,
