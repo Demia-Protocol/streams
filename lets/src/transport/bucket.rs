@@ -4,6 +4,9 @@ use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, vec::Vec};
 // 3rd-party
 use async_trait::async_trait;
 
+#[cfg_attr(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 // IOTA
 
 // Streams
@@ -96,5 +99,23 @@ where
             .get(&address)
             .cloned()
             .ok_or(Error::AddressError("No message found", address))
+    }
+}
+
+#[cfg_attr(feature = "serde")]
+impl<Msg: Serialize> Serialize for Client<Msg> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let bucket = self.bucket.lock();
+        bucket.serialize(serializer)
+    }
+}
+
+#[cfg_attr(feature = "serde")]
+impl<'de, Msg: Deserialize<'de>> Deserialize<'de> for Client<Msg> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let bucket: BTreeMap<Address, Vec<Msg>> = Deserialize::deserialize(deserializer)?;
+        Ok(Client {
+            bucket: Arc::new(spin::Mutex::new(bucket)),
+        })
     }
 }
