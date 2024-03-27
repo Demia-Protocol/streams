@@ -38,26 +38,8 @@ pub struct DIDUrlInfo {
     /// Fragment label for signature key method
     signing_fragment: String,
     /// Stronghold Adapter
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none", serialize_with = "serialize_stronghold", deserialize_with = "deserialize_stronghold"))]
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none", skip))]
     stronghold: Option<StrongholdSecretManager>,
-}
-
-fn serialize_stronghold<S>(x: &Option<StrongholdSecretManager>, s: S) -> core::result::Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    s.serialize_bool(x.is_some())
-    
-}
-
-pub fn deserialize_stronghold<'de, D>(deserializer: D) -> core::result::Result<Option<StrongholdSecretManager>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::de::Error;
-
-    let _had_stronghold = d.deserialize_bool();
-    Ok(None)
 }
 
 impl Default for DIDUrlInfo {
