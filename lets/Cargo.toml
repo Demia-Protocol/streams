@@ -50,7 +50,7 @@ prefix-hex = "0.7.0"
 futures = {version = "0.3.8", default-features = false, optional = true}
 identity_iota = { git = "https://github.com/demia-protocol/demia-sdk", default-features = true, optional = true}
 iota-client = { git = "https://github.com/demia-protocol/demia-sdk", features = ["tls", "stronghold"], optional = true}
-iota_stronghold = {version = "1.0.5", optional = true}
+iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", optional = true}
 
 reqwest = {version = "0.11.11", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
