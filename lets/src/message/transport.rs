@@ -14,6 +14,7 @@ use crate::{
 
 /// Binary network Message representation.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TransportMessage{
     body: Vec<u8>,
     pk: Vec<u8>,
