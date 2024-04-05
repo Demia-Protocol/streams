@@ -39,9 +39,9 @@ impl Ed25519 {
     where
         T: AsRef<[u8]>,
     {
-        Self(ed25519::SecretKey::generate_with(&mut SpongosRng::<KeccakF1600>::new(
-            seed,
-        )))
+        Self(ed25519::SecretKey::generate_with(&mut SpongosRng::<
+            KeccakF1600,
+        >::new(seed)))
     }
 }
 

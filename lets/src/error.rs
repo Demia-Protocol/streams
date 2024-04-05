@@ -168,19 +168,31 @@ impl From<FromUtf8Error> for Error {
 
 impl From<FromHexError> for Error {
     fn from(error: FromHexError) -> Self {
-        Self::Encoding("string", "hex", Box::new(Self::External(anyhow::anyhow!(error))))
+        Self::Encoding(
+            "string",
+            "hex",
+            Box::new(Self::External(anyhow::anyhow!(error))),
+        )
     }
 }
 
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Self {
-        Self::Encoding("string", "serde_json", Box::new(Self::External(anyhow::anyhow!(error))))
+        Self::Encoding(
+            "string",
+            "serde_json",
+            Box::new(Self::External(anyhow::anyhow!(error))),
+        )
     }
 }
 
 impl From<prefix_hex::Error> for Error {
     fn from(error: prefix_hex::Error) -> Self {
-        Self::Encoding("string", "prefix_hex", Box::new(Self::External(anyhow::anyhow!(error))))
+        Self::Encoding(
+            "string",
+            "prefix_hex",
+            Box::new(Self::External(anyhow::anyhow!(error))),
+        )
     }
 }
 

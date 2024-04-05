@@ -102,7 +102,6 @@ where
     type Msg = StreamsMessage;
     type SendResponse = DbMessage;
 
-
     /// This function stands as a DON alternative for sending that includes the public key and
     /// verifiable signature of the message for inclusion as a Data message within the network
     /// Signatures are conducted using ED25519 keys so the method uses that as a baseline assumption

@@ -1,4 +1,5 @@
 // Rust
+use core::ops::Deref;
 
 // IOTA
 
@@ -7,7 +8,7 @@ use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Mask},
         io,
-        types::Uint8,
+        types::{Uint32, Uint64, Uint8},
     },
     error::{Error as SpongosError, Result as SpongosResult},
     PRP,
@@ -29,6 +30,14 @@ pub enum PermissionDuration {
     NumPublishedmsgs(u32),
 }
 
+impl PermissionDuration {
+    pub fn seconds_from_now(secs: u64) -> Self {
+        let now = chrono::Utc::now();
+        let milis: u64 = now.timestamp_millis().try_into().unwrap();
+        Self::Unix(milis + secs * 1000_u64)
+    }
+}
+
 impl Default for PermissionDuration {
     fn default() -> Self {
         Self::Perpetual
@@ -42,7 +51,21 @@ impl Mask<&PermissionDuration> for sizeof::Context {
                 self.mask(Uint8::new(0))?;
                 Ok(self)
             }
-            _ => todo!(),
+            PermissionDuration::Unix(_) => {
+                self.mask(Uint8::new(1))?;
+                self.mask(Uint64::new(0))?;
+                Ok(self)
+            }
+            PermissionDuration::NumBranchMsgs(_) => {
+                self.mask(Uint8::new(2))?;
+                self.mask(Uint32::new(0))?;
+                Ok(self)
+            }
+            PermissionDuration::NumPublishedmsgs(_) => {
+                self.mask(Uint8::new(3))?;
+                self.mask(Uint32::new(0))?;
+                Ok(self)
+            }
         }
     }
 }
@@ -58,7 +81,21 @@ where
                 self.mask(Uint8::new(0))?;
                 Ok(self)
             }
-            _ => todo!(),
+            PermissionDuration::Unix(timestamp) => {
+                self.mask(Uint8::new(1))?;
+                self.mask(Uint64::new(*timestamp))?;
+                Ok(self)
+            }
+            PermissionDuration::NumBranchMsgs(num_branch_msgs) => {
+                self.mask(Uint8::new(2))?;
+                self.mask(Uint32::new(*num_branch_msgs))?;
+                Ok(self)
+            }
+            PermissionDuration::NumPublishedmsgs(num_published_msgs) => {
+                self.mask(Uint8::new(3))?;
+                self.mask(Uint32::new(*num_published_msgs))?;
+                Ok(self)
+            }
         }
     }
 }
@@ -75,10 +112,84 @@ where
             0 => {
                 *duration = PermissionDuration::Perpetual;
             }
-            1 | 2 | 3 => todo!(),
+            1 => {
+                let mut timestamp = Uint64::new(0);
+                self.mask(&mut timestamp)?;
+                *duration = PermissionDuration::Unix(timestamp.inner());
+            }
+            2 => {
+                let mut num_branch_msgs = Uint32::new(0);
+                self.mask(&mut num_branch_msgs)?;
+                *duration = PermissionDuration::NumBranchMsgs(num_branch_msgs.inner());
+            }
+            3 => {
+                let mut num_published_msgs = Uint32::new(0);
+                self.mask(&mut num_published_msgs)?;
+                *duration = PermissionDuration::NumPublishedmsgs(num_published_msgs.inner());
+            }
             o => return Err(SpongosError::InvalidOption("identifier", o)),
         }
         Ok(self)
+    }
+}
+
+// Constants representing permission types
+pub(crate) const READ_PERMISSION: u8 = 0;
+pub(crate) const READ_WRITE_PERMISSION: u8 = 1;
+pub(crate) const ADMIN_PERMISSION: u8 = 2;
+
+/// Enum representing different permission types
+#[derive(Debug, PartialEq, Eq)]
+pub enum PermissionType {
+    /// Read Access for the assigned branch
+    Read,
+    /// Read and Write Access for the branch. May send packets within the [`PermissionDuration`].
+    ReadWrite,
+    /// Read, Write, and Administrative privileges. Allows the User to send Keyloads to manage Read
+    /// and Write privileges for other members of the Stream
+    Admin,
+}
+
+/// Converts a u8 value into a PermissionType
+///
+/// # Arguments
+///
+/// * `value` - The u8 value representing the permission type
+///
+/// # Returns
+///
+/// Returns Some(PermissionType) if the conversion is successful,
+/// otherwise returns None.
+impl Into<u8> for PermissionType {
+    fn into(self) -> u8 {
+        match self {
+            PermissionType::Read => READ_PERMISSION,
+            PermissionType::ReadWrite => READ_WRITE_PERMISSION,
+            PermissionType::Admin => ADMIN_PERMISSION,
+        }
+    }
+}
+
+impl TryFrom<u8> for PermissionType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            READ_PERMISSION => Ok(PermissionType::Read),
+            READ_WRITE_PERMISSION => Ok(PermissionType::ReadWrite),
+            ADMIN_PERMISSION => Ok(PermissionType::Admin),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<T> From<&Permissioned<T>> for PermissionType {
+    fn from(value: &Permissioned<T>) -> Self {
+        match value {
+            Permissioned::Read(_) => PermissionType::Read,
+            Permissioned::ReadWrite(..) => PermissionType::ReadWrite,
+            Permissioned::Admin(_) => PermissionType::Admin,
+        }
     }
 }
 
@@ -131,6 +242,19 @@ impl<Identifier> Permissioned<Identifier> {
     /// Returns if the [`Permissioned`] is [`Permissioned::Admin`].
     pub fn is_admin(&self) -> bool {
         matches!(self, Permissioned::Admin(..))
+    }
+
+    pub fn r#type(&self) -> PermissionType {
+        self.into()
+    }
+}
+
+// Implementing Deref for Permissioned
+impl<Identifier> Deref for Permissioned<Identifier> {
+    type Target = Identifier;
+
+    fn deref(&self) -> &Self::Target {
+        self.identifier()
     }
 }
 

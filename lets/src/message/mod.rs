@@ -17,8 +17,8 @@ pub mod topic;
 mod message;
 
 pub use content::{
-    ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap,
-    ContentVerify, ContentWrap,
+    ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof,
+    ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
 };
 pub use hdf::HDF;
 pub use message::Message;

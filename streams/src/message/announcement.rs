@@ -26,7 +26,10 @@ use async_trait::async_trait;
 // Streams
 use lets::{
     id::{Identifier, Identity},
-    message::{ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap, Topic},
+    message::{
+        ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
+        Topic,
+    },
 };
 use spongos::{
     ddml::{

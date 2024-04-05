@@ -149,9 +149,13 @@ impl<'a, P, Trans> MessageBuilder<'a, P, Trans> {
         }
 
         if self.signed {
-            self.user.send_signed_packet(self.topic, public, private).await
+            self.user
+                .send_signed_packet(self.topic, public, private)
+                .await
         } else {
-            self.user.send_tagged_packet(self.topic, public, private).await
+            self.user
+                .send_tagged_packet(self.topic, public, private)
+                .await
         }
     }
 }
@@ -183,7 +187,10 @@ mod message_builder_tests {
         let mut user = make_user().await;
         user.new_branch(BASE_BRANCH, topic).await.unwrap();
 
-        let str_message = MessageBuilder::new(&mut user).with_payload(payload).signed().public();
+        let str_message = MessageBuilder::new(&mut user)
+            .with_payload(payload)
+            .signed()
+            .public();
 
         assert!(!str_message.private);
         assert!(str_message.signed);
@@ -236,29 +243,31 @@ mod message_builder_tests {
 
         assert!(received_private_msg.is_signed_packet());
         assert_eq!(
-            received_private_msg.as_signed_packet().unwrap().masked_payload,
-            priv_payload.as_bytes()
-        );
-        assert!(
             received_private_msg
                 .as_signed_packet()
                 .unwrap()
-                .public_payload
-                .is_empty()
+                .masked_payload,
+            priv_payload.as_bytes()
         );
+        assert!(received_private_msg
+            .as_signed_packet()
+            .unwrap()
+            .public_payload
+            .is_empty());
 
         assert!(received_public_msg.is_signed_packet());
         assert_eq!(
-            received_public_msg.as_signed_packet().unwrap().public_payload,
-            pub_payload.as_bytes()
-        );
-        assert!(
             received_public_msg
                 .as_signed_packet()
                 .unwrap()
-                .masked_payload
-                .is_empty()
+                .public_payload,
+            pub_payload.as_bytes()
         );
+        assert!(received_public_msg
+            .as_signed_packet()
+            .unwrap()
+            .masked_payload
+            .is_empty());
     }
 
     #[tokio::test]
@@ -286,28 +295,30 @@ mod message_builder_tests {
 
         assert!(received_private_msg.is_tagged_packet());
         assert_eq!(
-            received_private_msg.as_tagged_packet().unwrap().masked_payload,
-            priv_payload.as_bytes()
-        );
-        assert!(
             received_private_msg
                 .as_tagged_packet()
                 .unwrap()
-                .public_payload
-                .is_empty()
+                .masked_payload,
+            priv_payload.as_bytes()
         );
+        assert!(received_private_msg
+            .as_tagged_packet()
+            .unwrap()
+            .public_payload
+            .is_empty());
 
         assert!(received_public_msg.is_tagged_packet());
         assert_eq!(
-            received_public_msg.as_tagged_packet().unwrap().public_payload,
-            pub_payload.as_bytes()
-        );
-        assert!(
             received_public_msg
                 .as_tagged_packet()
                 .unwrap()
-                .masked_payload
-                .is_empty()
+                .public_payload,
+            pub_payload.as_bytes()
         );
+        assert!(received_public_msg
+            .as_tagged_packet()
+            .unwrap()
+            .masked_payload
+            .is_empty());
     }
 }

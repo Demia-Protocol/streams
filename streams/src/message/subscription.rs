@@ -35,8 +35,8 @@ use async_trait::async_trait;
 use lets::{
     id::{Identifier, Identity},
     message::{
-        ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof, ContentSizeof,
-        ContentUnwrap, ContentVerify, ContentWrap,
+        ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof,
+        ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
     },
 };
 use spongos::{
@@ -87,11 +87,17 @@ impl<'a> Wrap<'a> {
 impl<'a> ContentSizeof<Wrap<'a>> for sizeof::Context {
     async fn sizeof(&mut self, subscription: &Wrap<'a>) -> Result<&mut Self> {
         #[cfg(not(feature = "did"))]
-        self.encrypt_sizeof(subscription.author_identifier, &subscription.unsubscribe_key)
-            .await?;
+        self.encrypt_sizeof(
+            subscription.author_identifier,
+            &subscription.unsubscribe_key,
+        )
+        .await?;
         #[cfg(feature = "did")]
-        self.encrypt_sizeof(subscription.author_identifier, &subscription.unsubscribe_key)
-            .await?;
+        self.encrypt_sizeof(
+            subscription.author_identifier,
+            &subscription.unsubscribe_key,
+        )
+        .await?;
 
         self.mask(subscription.subscriber_id.identifier())?
             .sign_sizeof(subscription.subscriber_id)
@@ -108,8 +114,11 @@ where
     async fn wrap(&mut self, subscription: &mut Wrap<'a>) -> Result<&mut Self> {
         let ctx = self.join(subscription.initial_state)?;
         #[cfg(not(feature = "did"))]
-        ctx.encrypt(subscription.author_identifier, &subscription.unsubscribe_key)
-            .await?;
+        ctx.encrypt(
+            subscription.author_identifier,
+            &subscription.unsubscribe_key,
+        )
+        .await?;
         #[cfg(feature = "did")]
         ctx.encrypt(
             subscription.subscriber_id.identity_kind(),
@@ -169,11 +178,14 @@ where
 {
     async fn unwrap(&mut self, subscription: &mut Unwrap<'a>) -> Result<&mut Self> {
         let ctx = self.join(subscription.initial_state)?;
-        ctx.decrypt(&mut subscription.author_id, &mut subscription.unsubscribe_key)
-            .await?
-            .mask(&mut subscription.subscriber_identifier)?
-            .verify(&subscription.subscriber_identifier)
-            .await?;
+        ctx.decrypt(
+            &mut subscription.author_id,
+            &mut subscription.unsubscribe_key,
+        )
+        .await?
+        .mask(&mut subscription.subscriber_identifier)?
+        .verify(&subscription.subscriber_identifier)
+        .await?;
         Ok(self)
     }
 }

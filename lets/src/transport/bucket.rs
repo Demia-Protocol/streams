@@ -78,7 +78,11 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        self.bucket.lock().entry(addr).or_default().push(msg.clone());
+        self.bucket
+            .lock()
+            .entry(addr)
+            .or_default()
+            .push(msg.clone());
         Ok(msg)
     }
 

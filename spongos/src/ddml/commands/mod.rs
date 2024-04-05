@@ -68,7 +68,11 @@ pub trait Ed25519<Key, Hash> {
 
 /// X25519 command. Absorb Diffie-Hellman shared key.
 pub trait X25519<ExchangeKey, EncryptionKey> {
-    fn x25519(&mut self, exchange_key: ExchangeKey, encryption_key: EncryptionKey) -> Result<&mut Self>;
+    fn x25519(
+        &mut self,
+        exchange_key: ExchangeKey,
+        encryption_key: EncryptionKey,
+    ) -> Result<&mut Self>;
 }
 
 /// Fork command. Fork Spongos state and continue processing `Context` commands.

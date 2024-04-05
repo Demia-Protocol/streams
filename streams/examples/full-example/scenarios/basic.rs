@@ -22,7 +22,10 @@ const BASE_BRANCH: &str = "BASE_BRANCH";
 const BRANCH1: &str = "BRANCH1";
 const BRANCH2: &str = "BRANCH2";
 
-pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_seed: &str) -> Result<()> {
+pub(crate) async fn example<SR, T: GenericTransport<SR>>(
+    transport: T,
+    author_seed: &str,
+) -> Result<()> {
     let psk = Psk::from_seed("A pre shared key");
 
     let mut author = User::builder()
@@ -76,7 +79,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     print_user("Subscriber A", &subscriber_a);
 
     println!("> Author reads subscription of subscriber A");
-    let subscription_a_as_author = author.receive_message(subscription_a_as_a.address()).await?;
+    let subscription_a_as_author = author
+        .receive_message(subscription_a_as_a.address())
+        .await?;
     print_user("Author", &author);
 
     println!("> Author creates a new branch");
@@ -85,7 +90,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     print_send_result(&branch_announcement);
     print_user("Author", &author);
 
-    println!("> Author issues keyload for every user subscribed so far [SubscriberA, PSK] in Branch 1");
+    println!(
+        "> Author issues keyload for every user subscribed so far [SubscriberA, PSK] in Branch 1"
+    );
     let keyload_as_author = author.send_keyload_for_all(BRANCH1).await?;
     print_send_result(&keyload_as_author);
     print_user("Author", &author);
@@ -96,39 +103,33 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .try_next()
         .await?
         .expect("Subscriber A did not receive the expected branch announcement");
-    assert!(
-        branch_1_ann_as_a
-            .as_branch_announcement()
-            .expect("expected branch announcement, found something else")
-            .topic
-            .eq(&BRANCH1.into())
-    );
+    assert!(branch_1_ann_as_a
+        .as_branch_announcement()
+        .expect("expected branch announcement, found something else")
+        .topic
+        .eq(&BRANCH1.into()));
     print_user("Subscriber A", &subscriber_a);
     let branch_1_ann_as_b = subscriber_b
         .messages()
         .try_next()
         .await?
         .expect("Subscriber B did not receive the expected branch announcement");
-    assert!(
-        branch_1_ann_as_b
-            .as_branch_announcement()
-            .expect("expected branch announcement, found something else")
-            .topic
-            .eq(&BRANCH1.into())
-    );
+    assert!(branch_1_ann_as_b
+        .as_branch_announcement()
+        .expect("expected branch announcement, found something else")
+        .topic
+        .eq(&BRANCH1.into()));
     print_user("Subscriber B", &subscriber_b);
     let branch_1_ann_as_c = subscriber_c
         .messages()
         .try_next()
         .await?
         .expect("Subscriber C did not receive the expected branch announcement");
-    assert!(
-        branch_1_ann_as_c
-            .as_branch_announcement()
-            .expect("expected branch announcement, found something else")
-            .topic
-            .eq(&BRANCH1.into())
-    );
+    assert!(branch_1_ann_as_c
+        .as_branch_announcement()
+        .expect("expected branch announcement, found something else")
+        .topic
+        .eq(&BRANCH1.into()));
     print_user("Subscriber C", &subscriber_c);
 
     println!("> Subscribers read the keyload");
@@ -138,36 +139,30 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .await?
         .expect("subscriber A did not receive the expected keyload");
     print_user("Subscriber A", &subscriber_a);
-    assert!(
-        keyload_as_a
-            .as_keyload()
-            .expect("expected keyload, found something else")
-            .includes_subscriber(&subscriber_a_id)
-    );
+    assert!(keyload_as_a
+        .as_keyload()
+        .expect("expected keyload, found something else")
+        .includes_subscriber(&subscriber_a_id));
     let keyload_as_b = subscriber_b
         .messages()
         .try_next()
         .await?
         .expect("subscriber B did not receive the expected keyload");
     print_user("Subscriber B", &subscriber_b);
-    assert!(
-        !keyload_as_b
-            .as_keyload()
-            .expect("expected keyload, found something else")
-            .includes_subscriber(&subscriber_b_id)
-    );
+    assert!(!keyload_as_b
+        .as_keyload()
+        .expect("expected keyload, found something else")
+        .includes_subscriber(&subscriber_b_id));
     let keyload_as_c = subscriber_c
         .messages()
         .try_next()
         .await?
         .expect("subscriber C did not receive the expected keyload");
     print_user("Subscriber C", &subscriber_c);
-    assert!(
-        keyload_as_c
-            .as_keyload()
-            .expect("expected keyload, found something else")
-            .includes_psk(&psk.to_pskid())
-    );
+    assert!(keyload_as_c
+        .as_keyload()
+        .expect("expected keyload, found something else")
+        .includes_psk(&psk.to_pskid()));
 
     println!("> Author sends a tagged packet linked to the keyload");
     let tagged_packet_as_author = author
@@ -186,12 +181,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .await?
         .expect("subscriber A did not receive the tagged packet sent by Author");
     print_user("Subscriber A", &subscriber_a);
-    assert!(
-        tagged_packet_as_a
-            .public_payload()
-            .expect("expected a message with public payload, found something else")
-            .is_empty()
-    );
+    assert!(tagged_packet_as_a
+        .public_payload()
+        .expect("expected a message with public payload, found something else")
+        .is_empty());
     assert_eq!(
         tagged_packet_as_a
             .masked_payload()
@@ -206,12 +199,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .await?
         .expect("subscriber C did not receive the tagged packet sent by subscriber A");
     print_user("Subscriber C", &subscriber_c);
-    assert!(
-        tagged_packet_as_c
-            .public_payload()
-            .expect("expected a message with public payload, found something else")
-            .is_empty()
-    );
+    assert!(tagged_packet_as_c
+        .public_payload()
+        .expect("expected a message with public payload, found something else")
+        .is_empty());
     assert_eq!(
         tagged_packet_as_c
             .masked_payload()
@@ -255,18 +246,18 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
             .expect("expected a message with public payload, found something else"),
         PUBLIC_PAYLOAD
     );
-    assert!(
-        signed_packet_as_b
-            .masked_payload()
-            .expect("expected a message with masked payload, found something else")
-            .is_empty()
-    );
+    assert!(signed_packet_as_b
+        .masked_payload()
+        .expect("expected a message with masked payload, found something else")
+        .is_empty());
 
     assert_eq!(author.sync().await?, 0);
     assert_eq!(subscriber_a.sync().await?, 2);
     assert_eq!(subscriber_b.sync().await?, 0);
 
-    println!("> Subscriber C attempts to send a signed packet (but PSK users cannot send packets!)");
+    println!(
+        "> Subscriber C attempts to send a signed packet (but PSK users cannot send packets!)"
+    );
     let messages_in_branch_as_c = subscriber_c
         .messages()
         .filter_branch(|message| {
@@ -301,7 +292,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         "Subscriber A has readonly permissions and should not be able to send signed packets"
     );
 
-    println!("> The other users don't receive the messages attempted by Subscriber C and Subscriber A");
+    println!(
+        "> The other users don't receive the messages attempted by Subscriber C and Subscriber A"
+    );
     assert_eq!(author.sync().await?, 0);
     assert_eq!(subscriber_b.sync().await?, 0);
 
@@ -344,28 +337,57 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     println!("> Backup & restore users");
     let author_backup = author.backup("my secret backup password").await?;
     println!("  Author backup size: {} Bytes", author_backup.len());
-    let new_author = User::restore(&author_backup, "my secret backup password", transport.clone()).await?;
+    let new_author = User::restore(
+        &author_backup,
+        "my secret backup password",
+        transport.clone(),
+    )
+    .await?;
     print_user("Recovered Author", &new_author);
     assert_eq!(author, new_author);
     author = new_author;
 
     let subscriber_a_backup = subscriber_a.backup("my secret backup password").await?;
-    println!("  Subscriber A backup size: {} Bytes", subscriber_a_backup.len());
-    let new_subscriber_a = User::restore(&subscriber_a_backup, "my secret backup password", transport.clone()).await?;
+    println!(
+        "  Subscriber A backup size: {} Bytes",
+        subscriber_a_backup.len()
+    );
+    let new_subscriber_a = User::restore(
+        &subscriber_a_backup,
+        "my secret backup password",
+        transport.clone(),
+    )
+    .await?;
     print_user("Recovered Subscriber A", &new_subscriber_a);
     assert_eq!(subscriber_a, new_subscriber_a);
     subscriber_a = new_subscriber_a;
 
     let subscriber_b_backup = subscriber_b.backup("my secret backup password").await?;
-    println!("  Subscriber B backup size: {} Bytes", subscriber_b_backup.len());
-    let new_subscriber_b = User::restore(&subscriber_b_backup, "my secret backup password", transport.clone()).await?;
+    println!(
+        "  Subscriber B backup size: {} Bytes",
+        subscriber_b_backup.len()
+    );
+    let new_subscriber_b = User::restore(
+        &subscriber_b_backup,
+        "my secret backup password",
+        transport.clone(),
+    )
+    .await?;
     print_user("Recovered Subscriber B", &new_subscriber_b);
     assert_eq!(subscriber_b, new_subscriber_b);
     subscriber_b = new_subscriber_b;
 
     let subscriber_c_backup = subscriber_c.backup("my secret backup password").await?;
-    println!("  Subscriber C backup size: {} Bytes", subscriber_c_backup.len());
-    let new_subscriber_c = User::restore(&subscriber_c_backup, "my secret backup password", transport.clone()).await?;
+    println!(
+        "  Subscriber C backup size: {} Bytes",
+        subscriber_c_backup.len()
+    );
+    let new_subscriber_c = User::restore(
+        &subscriber_c_backup,
+        "my secret backup password",
+        transport.clone(),
+    )
+    .await?;
     print_user("Recovered Subscriber C", &new_subscriber_c);
     assert_eq!(subscriber_c, new_subscriber_c);
     subscriber_c = new_subscriber_c;
@@ -383,7 +405,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     // OOB data must be recovered manually
     new_author.add_subscriber(subscriber_b_id.clone());
     new_author.receive_message(announcement.address()).await?;
-    new_author.receive_message(subscription_a_as_a.address()).await?;
+    new_author
+        .receive_message(subscription_a_as_a.address())
+        .await?;
     assert_eq!(new_author.sync().await?, 7);
     print_user("Recovered Author", &new_author);
     assert_eq!(author, new_author);
@@ -394,7 +418,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .with_transport(transport.clone())
         .build();
 
-    new_subscriber_a.receive_message(announcement.address()).await?;
+    new_subscriber_a
+        .receive_message(announcement.address())
+        .await?;
     assert_eq!(new_subscriber_a.sync().await?, 7);
     print_user("Recovered Subscriber A", &new_subscriber_a);
     assert_eq!(subscriber_a, new_subscriber_a);
@@ -404,7 +430,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .with_identity(Ed25519::from_seed("SUBSCRIBERB9SEED"))
         .with_transport(transport.clone())
         .build();
-    new_subscriber_b.receive_message(announcement.address()).await?;
+    new_subscriber_b
+        .receive_message(announcement.address())
+        .await?;
     assert_eq!(new_subscriber_b.sync().await?, 6);
     print_user("Recovered Subscriber B", &new_subscriber_b);
     assert_eq!(subscriber_b, new_subscriber_b);
@@ -414,7 +442,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .with_psk(psk.to_pskid(), psk)
         .with_transport(transport.clone())
         .build();
-    new_subscriber_c.receive_message(announcement.address()).await?;
+    new_subscriber_c
+        .receive_message(announcement.address())
+        .await?;
     assert_eq!(new_subscriber_c.sync().await?, 7);
     print_user("Recovered Subscriber C", &new_subscriber_c);
     assert_eq!(subscriber_c, new_subscriber_c);

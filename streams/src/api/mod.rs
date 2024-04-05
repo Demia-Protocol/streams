@@ -1,6 +1,9 @@
 /// Identifier Key storage. Used for keeping track of channel state
 mod cursor_store;
 
+/// Split send and receive fns for user
+pub(crate) mod processing;
+
 /// Unwrapped Message Types
 pub mod message;
 /// Message builder for sending payloads

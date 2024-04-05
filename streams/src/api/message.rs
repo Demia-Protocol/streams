@@ -14,7 +14,8 @@ use lets::{
 
 // Local
 use crate::message::{
-    announcement, branch_announcement, keyload, signed_packet, subscription, tagged_packet, unsubscription,
+    announcement, branch_announcement, keyload, signed_packet, subscription, tagged_packet,
+    unsubscription,
 };
 
 /// A processed Streams message
@@ -223,7 +224,9 @@ impl Message {
     pub fn public_payload(&self) -> Option<&[u8]> {
         match &self.content {
             MessageContent::TaggedPacket(TaggedPacket { public_payload, .. })
-            | MessageContent::SignedPacket(SignedPacket { public_payload, .. }) => Some(public_payload),
+            | MessageContent::SignedPacket(SignedPacket { public_payload, .. }) => {
+                Some(public_payload)
+            }
             _ => None,
         }
     }
@@ -235,7 +238,9 @@ impl Message {
     pub fn masked_payload(&self) -> Option<&[u8]> {
         match &self.content {
             MessageContent::TaggedPacket(TaggedPacket { masked_payload, .. })
-            | MessageContent::SignedPacket(SignedPacket { masked_payload, .. }) => Some(masked_payload),
+            | MessageContent::SignedPacket(SignedPacket { masked_payload, .. }) => {
+                Some(masked_payload)
+            }
             _ => None,
         }
     }
@@ -278,7 +283,9 @@ pub struct Keyload {
 impl Keyload {
     /// Returns true if the provided subscriber [`Identifier`] is present in the subscribers list
     pub fn includes_subscriber(&self, subscriber: &Identifier) -> bool {
-        self.subscribers.iter().any(|s| s.identifier() == subscriber)
+        self.subscribers
+            .iter()
+            .any(|s| s.identifier() == subscriber)
     }
 
     /// Returns true if the provided [`PskId`] is present in the psks list

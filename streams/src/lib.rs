@@ -65,4 +65,6 @@ pub use api::{
 mod error;
 pub use error::{Error, Result};
 
-pub use lets::{address::Address, error::Error as LetsError, id, message::TransportMessage, transport};
+pub use lets::{
+    address::Address, error::Error as LetsError, id, message::TransportMessage, transport,
+};

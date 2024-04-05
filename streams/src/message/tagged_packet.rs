@@ -55,7 +55,11 @@ impl<'a> Wrap<'a> {
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
     /// * `public_payload`: A payload that will not be masked.
     /// * `masked_payload`: A payload taht will be masked.
-    pub(crate) fn new(initial_state: &'a mut Spongos, public_payload: &'a [u8], masked_payload: &'a [u8]) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        public_payload: &'a [u8],
+        masked_payload: &'a [u8],
+    ) -> Self {
         Self {
             initial_state,
             public_payload,

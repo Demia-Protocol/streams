@@ -9,7 +9,9 @@ use spongos::{ddml::commands::unwrap, KeccakF1600, Spongos, PRP};
 // Local
 use crate::{
     error::Result,
-    message::{content::ContentUnwrap, hdf::HDF, message::Message, pcf::PCF, transport::TransportMessage},
+    message::{
+        content::ContentUnwrap, hdf::HDF, message::Message, pcf::PCF, transport::TransportMessage,
+    },
 };
 
 /// Message context preparsed for unwrapping.
@@ -35,7 +37,12 @@ impl<F> PreparsedMessage<F> {
     /// * `header`: The `HDF` parsed from the transport message
     /// * `spongos`: The `Context` state following the `HDF` parsing
     /// * `cursor`: The read position of the `Context` stream following the `HDF` parsing
-    pub(crate) fn new(transport_msg: TransportMessage, header: HDF, spongos: Spongos<F>, cursor: usize) -> Self {
+    pub(crate) fn new(
+        transport_msg: TransportMessage,
+        header: HDF,
+        spongos: Spongos<F>,
+        cursor: usize,
+    ) -> Self {
         Self {
             transport_msg,
             header,
@@ -85,7 +92,8 @@ impl<F> PreparsedMessage<F> {
         let spongos = self.spongos;
         let transport_msg = self.transport_msg;
         // Cannot use Self::remaining_message() due to partial move of spongos
-        let mut ctx = unwrap::Context::new_with_spongos(&transport_msg.body()[self.cursor..], spongos);
+        let mut ctx =
+            unwrap::Context::new_with_spongos(&transport_msg.body()[self.cursor..], spongos);
         ctx.unwrap(&mut pcf).await?;
         // discard `self.ctx.stream` that should be empty
         let (spongos, _) = ctx.finalize();

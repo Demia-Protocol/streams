@@ -114,9 +114,9 @@ where
     fn mask(&mut self, topic: &mut Topic) -> SpongosResult<&mut Self> {
         let mut topic_bytes = topic.as_ref().to_vec();
         self.mask(Bytes::new(&mut topic_bytes))?;
-        *topic = topic_bytes
-            .try_into()
-            .map_err(|e: crate::error::Error| spongos::error::Error::Context("Mask", e.to_string()))?;
+        *topic = topic_bytes.try_into().map_err(|e: crate::error::Error| {
+            spongos::error::Error::Context("Mask", e.to_string())
+        })?;
         Ok(self)
     }
 }

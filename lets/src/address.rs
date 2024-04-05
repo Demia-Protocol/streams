@@ -140,14 +140,16 @@ impl Display for Address {
 impl FromStr for Address {
     type Err = crate::error::Error;
     fn from_str(string: &str) -> Result<Address> {
-        let (appaddr_str, msgid_str) =
-            string
-                .split_once(':')
-                .ok_or(Error::Malformed("address string", ":", string.to_string()))?;
-        let appaddr =
-            AppAddr::from_str(appaddr_str).map_err(|e| Error::Encoding("AppAddr", "hexadecimal", Box::new(e)))?;
+        let (appaddr_str, msgid_str) = string.split_once(':').ok_or(Error::Malformed(
+            "address string",
+            ":",
+            string.to_string(),
+        ))?;
+        let appaddr = AppAddr::from_str(appaddr_str)
+            .map_err(|e| Error::Encoding("AppAddr", "hexadecimal", Box::new(e)))?;
 
-        let msgid = MsgId::from_str(msgid_str).map_err(|e| Error::Encoding("MsgId", "hexadecimal", Box::new(e)))?;
+        let msgid = MsgId::from_str(msgid_str)
+            .map_err(|e| Error::Encoding("MsgId", "hexadecimal", Box::new(e)))?;
 
         Ok(Address { appaddr, msgid })
     }
@@ -392,7 +394,8 @@ where
     IS: io::IStream,
 {
     fn absorb(&mut self, address: &mut Address) -> SpongosResult<&mut Self> {
-        self.absorb(&mut address.appaddr)?.absorb(&mut address.msgid)
+        self.absorb(&mut address.appaddr)?
+            .absorb(&mut address.msgid)
     }
 }
 

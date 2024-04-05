@@ -163,7 +163,8 @@ impl PartialOrd for KeyPair {
 
 impl Ord for KeyPair {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        (self.0.type_(), self.0.private().as_ref()).cmp(&(other.0.type_(), other.0.private().as_ref()))
+        (self.0.type_(), self.0.private().as_ref())
+            .cmp(&(other.0.type_(), other.0.private().as_ref()))
     }
 }
 

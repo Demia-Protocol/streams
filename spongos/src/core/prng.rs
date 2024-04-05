@@ -35,7 +35,10 @@ impl<F> SpongosRng<F> {
 
     /// Creates a new [`SpongosRng`] from an explicit [`Spongos`] state and [`Nonce`].
     fn from_spongos(prng: Spongos<F>, nonce: Nonce) -> Self {
-        Self { spongos: prng, nonce }
+        Self {
+            spongos: prng,
+            nonce,
+        }
     }
 
     /// Increments the inner nonce

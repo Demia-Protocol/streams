@@ -17,7 +17,10 @@ const MASKED_PAYLOAD: &[u8] = b"MASKEDPAYLOAD";
 const BASE_BRANCH: &str = "BASE_BRANCH";
 const BRANCH1: &str = "BRANCH1";
 
-pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_seed: &str) -> Result<()> {
+pub(crate) async fn example<SR, T: GenericTransport<SR>>(
+    transport: T,
+    author_seed: &str,
+) -> Result<()> {
     let psk = Psk::from_seed("A pre shared key");
 
     let mut author = User::builder()
@@ -75,7 +78,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .send_signed_packet(BRANCH1, &PUBLIC_PAYLOAD, &MASKED_PAYLOAD)
         .await?;
 
-    let selectors = vec![Selector::Identifier(subscriber_a.identifier().unwrap().clone())];
+    let selectors = vec![Selector::Identifier(
+        subscriber_a.identifier().unwrap().clone(),
+    )];
     let msgs = subscriber_b.messages().from(&selectors).await;
 
     // Find only 1 message from Sub a, not the author message

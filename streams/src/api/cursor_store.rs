@@ -62,7 +62,11 @@ impl CursorStore {
     ///
     /// Returns:
     /// A reference to a [`Permissioned`]<[`Identifier`]>
-    pub(crate) fn get_permission(&self, topic: &Topic, id: &Identifier) -> Option<&Permissioned<Identifier>> {
+    pub(crate) fn get_permission(
+        &self,
+        topic: &Topic,
+        id: &Identifier,
+    ) -> Option<&Permissioned<Identifier>> {
         self.0.get(topic).and_then(|branch| {
             branch
                 .cursors
@@ -70,6 +74,17 @@ impl CursorStore {
                 .find(|c| c.0.identifier() == id)
                 .map(|(perm, _)| perm)
         })
+    }
+
+    /// Given an [`Identifier`], return the total cursor number
+    ///
+    /// # Arguments
+    /// * `id`: The identifier of the cursor to get.
+    ///
+    /// Returns:
+    /// The total cursor of all topics (Num msg sent)
+    pub(crate) fn total_msg_for_id(&self, id: &Identifier) -> usize {
+        self.cursors().filter(|c| &**c.1 == id).map(|c| c.2).sum()
     }
 
     /// Given a [`Topic`] and an [`Identifier`], return the cursor if it exists
@@ -92,10 +107,15 @@ impl CursorStore {
     }
 
     /// Returns an iterator over all the cursors in the tree
-    pub(crate) fn cursors(&self) -> impl Iterator<Item = (&Topic, &Permissioned<Identifier>, usize)> + Clone + '_ {
-        self.0
-            .iter()
-            .flat_map(|(topic, branch)| branch.cursors.iter().map(move |(id, cursor)| (topic, id, *cursor)))
+    pub(crate) fn cursors(
+        &self,
+    ) -> impl Iterator<Item = (&Topic, &Permissioned<Identifier>, usize)> + Clone + '_ {
+        self.0.iter().flat_map(|(topic, branch)| {
+            branch
+                .cursors
+                .iter()
+                .map(move |(id, cursor)| (topic, id, *cursor))
+        })
     }
 
     /// Given a [`Topic`], return an iterator over the cursors for that topic, if any.
@@ -225,7 +245,9 @@ mod tests {
     #[test]
     fn branch_store_can_remove_a_cursor_from_all_branches_at_once() {
         let mut branch_store = CursorStore::new();
-        let identifier = Identity::from(Ed25519::from_seed("identifier 1")).identifier().clone();
+        let identifier = Identity::from(Ed25519::from_seed("identifier 1"))
+            .identifier()
+            .clone();
         let permission = Permissioned::ReadWrite(identifier.clone(), PermissionDuration::Perpetual);
         let topic_1 = Topic::new("topic 1".to_string());
         let topic_2 = Topic::new("topic 2".to_string());

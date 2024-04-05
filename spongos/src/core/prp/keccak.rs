@@ -41,6 +41,8 @@ impl PRP for KeccakF1600 {
     }
 
     fn inner_mut(&mut self) -> &mut GenericArray<u8, Self::CapacitySize> {
-        unsafe { &mut *(self.state.as_mut_ptr().add(21) as *mut GenericArray<u8, Self::CapacitySize>) }
+        unsafe {
+            &mut *(self.state.as_mut_ptr().add(21) as *mut GenericArray<u8, Self::CapacitySize>)
+        }
     }
 }

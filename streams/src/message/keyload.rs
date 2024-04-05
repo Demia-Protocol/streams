@@ -43,7 +43,8 @@ use lets::id::did::DID_ENCRYPTED_DATA_SIZE;
 use lets::{
     id::{Identifier, Identity, Permissioned, Psk, PskId},
     message::{
-        self, ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof, ContentVerify,
+        self, ContentDecrypt, ContentEncrypt, ContentEncryptSizeOf, ContentSign, ContentSignSizeof,
+        ContentVerify,
     },
 };
 use spongos::{
@@ -120,18 +121,21 @@ impl<'a, 'b, Subscribers, Psks> Wrap<'a, 'b, Subscribers, Psks> {
 }
 
 #[async_trait]
-impl<'a, 'b, Subscribers, Psks> message::ContentSizeof<Wrap<'a, 'b, Subscribers, Psks>> for sizeof::Context
+impl<'a, 'b, Subscribers, Psks> message::ContentSizeof<Wrap<'a, 'b, Subscribers, Psks>>
+    for sizeof::Context
 where
     Subscribers: IntoIterator<Item = Permissioned<Identifier>> + Clone + Send + Sync,
     Subscribers::IntoIter: ExactSizeIterator + Send,
     Psks: IntoIterator<Item = &'a (PskId, Psk)> + Clone + Send + Sync,
     Psks::IntoIter: ExactSizeIterator + Send,
 {
-    async fn sizeof(&mut self, keyload: &Wrap<'a, 'b, Subscribers, Psks>) -> Result<&mut sizeof::Context> {
+    async fn sizeof(
+        &mut self,
+        keyload: &Wrap<'a, 'b, Subscribers, Psks>,
+    ) -> Result<&mut sizeof::Context> {
         let psks = keyload.psks.clone().into_iter();
         let n_psks = Size::new(psks.len());
         self.absorb(NBytes::new(keyload.nonce))?;
-
 
         // Loop through provided identifiers, masking the shared key for each one
         #[cfg(not(feature = "did"))]
@@ -140,25 +144,32 @@ where
             let n_subscribers = Size::new(subscribers.len());
             self.absorb(n_subscribers)?;
             for subscriber in subscribers {
-                self.fork().mask(&subscriber)?.encrypt_sizeof(subscriber.identifier(), &keyload.key).await?;
+                self.fork()
+                    .mask(&subscriber)?
+                    .encrypt_sizeof(subscriber.identifier(), &keyload.key)
+                    .await?;
             }
         }
 
         // Loop through with did and ed subscribers separately
         #[cfg(feature = "did")]
         {
-            let did_subscribers = keyload.subscribers.clone().into_iter()
-                .filter(|s|
-                    match s.identifier() {
+            let did_subscribers = keyload
+                .subscribers
+                .clone()
+                .into_iter()
+                .filter(|s| match s.identifier() {
                     Identifier::DID(_) => true,
-                    _ => false
+                    _ => false,
                 })
                 .collect::<Vec<_>>();
-            let ed_subscribers = keyload.subscribers.clone().into_iter()
-                .filter(|s|
-                    match s.identifier() {
+            let ed_subscribers = keyload
+                .subscribers
+                .clone()
+                .into_iter()
+                .filter(|s| match s.identifier() {
                     Identifier::Ed25519(_) => true,
-                    _ => false
+                    _ => false,
                 })
                 .collect::<Vec<_>>();
 
@@ -167,10 +178,7 @@ where
             for subscriber in did_subscribers {
                 self.fork()
                     .mask(&subscriber)?
-                    .encrypt_sizeof(
-                        subscriber.identifier(),
-                        &keyload.key,
-                    )
+                    .encrypt_sizeof(subscriber.identifier(), &keyload.key)
                     .await?;
             }
 
@@ -179,13 +187,9 @@ where
             for subscriber in ed_subscribers {
                 self.fork()
                     .mask(&subscriber)?
-                    .encrypt_sizeof(
-                        subscriber.identifier(),
-                        &keyload.key,
-                    )
+                    .encrypt_sizeof(subscriber.identifier(), &keyload.key)
                     .await?;
             }
-
         }
         self.absorb(n_psks)?;
         // Loop through provided pskids, masking the shared key for each one
@@ -205,7 +209,8 @@ where
 }
 
 #[async_trait]
-impl<'a, 'b, OS, Subscribers, Psks> message::ContentWrap<Wrap<'a, 'b, Subscribers, Psks>> for wrap::Context<OS>
+impl<'a, 'b, OS, Subscribers, Psks> message::ContentWrap<Wrap<'a, 'b, Subscribers, Psks>>
+    for wrap::Context<OS>
 where
     Subscribers: IntoIterator<Item = Permissioned<Identifier>> + Clone + Send,
     Subscribers::IntoIter: ExactSizeIterator + Send,
@@ -227,27 +232,34 @@ where
             let n_subscribers = Size::new(subscribers.len());
             self.absorb(n_subscribers)?;
             for subscriber in subscribers {
-                self.fork().mask(&subscriber)?.encrypt(subscriber.identifier(), &keyload.key).await?;
+                self.fork()
+                    .mask(&subscriber)?
+                    .encrypt(subscriber.identifier(), &keyload.key)
+                    .await?;
             }
         }
 
         // Loop through with did and ed subscribers separately
         #[cfg(feature = "did")]
         {
-            let did_subscribers = keyload.subscribers.clone().into_iter()
-                .filter(|s|
-                    match s.identifier() {
-                        Identifier::DID(_) => true,
-                        _ => false
-                    })
-                    .collect::<Vec<_>>();
-            let ed_subscribers = keyload.subscribers.clone().into_iter()
-                .filter(|s|
-                    match s.identifier() {
-                        Identifier::Ed25519(_) => true,
-                        _ => false
-                    })
-                    .collect::<Vec<_>>();
+            let did_subscribers = keyload
+                .subscribers
+                .clone()
+                .into_iter()
+                .filter(|s| match s.identifier() {
+                    Identifier::DID(_) => true,
+                    _ => false,
+                })
+                .collect::<Vec<_>>();
+            let ed_subscribers = keyload
+                .subscribers
+                .clone()
+                .into_iter()
+                .filter(|s| match s.identifier() {
+                    Identifier::Ed25519(_) => true,
+                    _ => false,
+                })
+                .collect::<Vec<_>>();
 
             let n_did_subscribers = Size::new(did_subscribers.len());
             self.absorb(n_did_subscribers)?;
@@ -274,7 +286,6 @@ where
                     )
                     .await?;
             }
-
         }
 
         self.absorb(n_psks)?;
@@ -351,7 +362,6 @@ where
         self.join(keyload.initial_state)?
             .absorb(NBytes::new(&mut nonce))?;
 
-
         #[cfg(not(feature = "did"))]
         {
             let mut n_subscribers = Size::default();
@@ -361,8 +371,9 @@ where
                 keyload,
                 n_subscribers,
                 &mut key,
-                SubscriberKind::Ed25519
-            ).await?;
+                SubscriberKind::Ed25519,
+            )
+            .await?;
         }
 
         #[cfg(feature = "did")]
@@ -376,8 +387,9 @@ where
                 keyload,
                 n_did_subscribers,
                 &mut key,
-                SubscriberKind::DID
-            ).await?;
+                SubscriberKind::DID,
+            )
+            .await?;
 
             self.absorb(&mut n_ed_subscribers)?;
             unwrap_subscribers(
@@ -385,8 +397,9 @@ where
                 keyload,
                 n_ed_subscribers,
                 &mut key,
-                SubscriberKind::Ed25519
-            ).await?;
+                SubscriberKind::Ed25519,
+            )
+            .await?;
         }
         self.absorb(&mut n_psks)?;
 
@@ -424,7 +437,6 @@ where
     }
 }
 
-
 enum SubscriberKind {
     Ed25519,
     #[cfg(feature = "did")]
@@ -434,13 +446,13 @@ async fn unwrap_subscribers<'a, IS: io::IStream>(
     ctx: &mut unwrap::Context<IS>,
     keyload: &mut Unwrap<'a>,
     num_subscribers: Size,
-    key: &mut Option<[u8;KEY_SIZE]>,
-    kind: SubscriberKind
+    key: &mut Option<[u8; KEY_SIZE]>,
+    kind: SubscriberKind,
 ) -> Result<()> {
     let drop_len = match kind {
         SubscriberKind::Ed25519 => KEY_SIZE + x25519::PUBLIC_KEY_LENGTH,
         #[cfg(feature = "did")]
-        SubscriberKind::DID => DID_ENCRYPTED_DATA_SIZE
+        SubscriberKind::DID => DID_ENCRYPTED_DATA_SIZE,
     };
 
     for _ in 0..num_subscribers.inner() {
