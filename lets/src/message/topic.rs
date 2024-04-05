@@ -20,7 +20,8 @@ use spongos::{
 use crate::error::Result;
 
 /// A wrapper around a `String` used for identifying a branch within a `Stream`
-#[derive(Clone, PartialEq, Eq, Debug, Default, Hash, serde::Serialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Topic(String);
 
 impl Topic {

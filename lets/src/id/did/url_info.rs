@@ -1,5 +1,5 @@
 // Rust
-use alloc::{string::String, vec::Vec};
+use alloc::{string::{self, String}, vec::Vec};
 use core::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
@@ -27,6 +27,7 @@ use spongos::{
 };
 
 /// `DID` Document details
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DIDUrlInfo {
     /// `DID` string
     did: String,
@@ -37,6 +38,7 @@ pub struct DIDUrlInfo {
     /// Fragment label for signature key method
     signing_fragment: String,
     /// Stronghold Adapter
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none", skip))]
     stronghold: Option<StrongholdSecretManager>,
 }
 

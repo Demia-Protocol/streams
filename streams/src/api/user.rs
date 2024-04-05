@@ -52,7 +52,7 @@ use crate::{
     message::{
         announcement, message_types,
     },
-    Error, Result,
+    Error, Result, Selector,
 };
 
 pub(crate) const ANN_MESSAGE_NUM: usize = 0; // Announcement is always the first message of authors
@@ -60,22 +60,26 @@ pub(crate) const SUB_MESSAGE_NUM: usize = 0; // Subscription is always the first
 pub(crate) const INIT_MESSAGE_NUM: usize = 1; // First non-reserved message number
 
 /// The state of a user, mapping publisher cursors and link states for message processing.
-#[derive(PartialEq, Eq, Default)]
-pub(crate) struct State {
+#[derive(PartialEq, Eq, Default, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+struct State {
     /// Users' [`Identity`] information, contains keys and logic for signing and verification.
     ///
     /// None if the user is not created with an identity
-    pub(crate) user_id: Option<Identity>,
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    user_id: Option<Identity>,
 
     /// [`Address`] of the stream announcement message.
     ///
     /// None if channel is not created or user is not subscribed.
-    pub(crate) stream_address: Option<Address>,
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    stream_address: Option<Address>,
 
     /// [`Identifier`] of the channel author.
     ///
     /// None if channel is not created or user is not subscribed.
-    pub(crate) author_identifier: Option<Identifier>,
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    author_identifier: Option<Identifier>,
 
     /// Users' trusted public keys together with additional sequencing info: (msgid, seq_no) mapped
     /// by branch topic Vec.
@@ -605,6 +609,59 @@ where
             .map_err(Error::Messages)
     }
 
+    pub async fn sync_from(&mut self, selector: &Selector, topic: impl Into<Topic>) -> Result<Messages<T>> {
+        let topic = topic.into();
+        let addr = AppAddr::gen(&self.state.author_identifier.as_ref().unwrap(), &self.state.base_branch);
+        let mut latest = Address::new(addr, self.get_latest_link(&topic).ok_or_else(|| {
+            Error::TopicNotFound(topic.clone())
+        })?);
+
+        let mut msg = self
+            .transport
+            .recv_message(latest)
+            .await
+            .map_err(|e| Error::Transport(latest, "receive message", e))?;
+        let mut preparsed: PreparsedMessage = msg.parse_header().await
+            .map_err(|e| Error::Unwrapping("header", latest, e))?;
+        let mut header = preparsed.header();
+
+        let mut msgs = HashMap::new();
+        
+        // Check if the selector precedes the latest message already, 
+        // meaning we need to go forward before retuning any messages.
+        let mut forward = selector.is_from_header(&header, Some(latest)); 
+
+        // sync up only if we really need to, to prevent double fetching
+        if forward {
+            // Only fetch until we meet our reqs
+            while let (false, Some(Ok(m))) = (forward, self.messages().next().await) {
+                // Add to the cache for later in order not to fetch twice
+                msgs.insert(m.address().relative(), m.clone());
+                latest = m.address();
+                header = preparsed.header();
+                forward = !selector.is_from_header(&header, Some(latest)); 
+            };
+        }
+
+        while selector.is_from_header(header, Some(latest)) && header.linked_msg_address.is_some() {
+            latest = Address::new(addr, header.linked_msg_address.unwrap());
+
+            msg = self
+                .transport
+                .recv_message(latest)
+                .await
+                .map_err(|e| Error::Transport(latest, "receive message", e))?;
+            preparsed = msg.parse_header().await
+                .map_err(|e| Error::Unwrapping("header", latest, e))?;
+            header = preparsed.header();
+        };
+
+        let start = (topic, header.publisher().clone(), header.sequence);
+        let messages_stream = Messages::new_with_cache(self, msgs, Some(start));
+
+        Ok(messages_stream)
+    }
+
     /// Iteratively fetches all the pending messages from the transport
     ///
     /// Return a vector with all the messages collected. This is a convenience
@@ -1033,3 +1090,50 @@ impl<T> PartialEq for User<T> {
 /// this fact is that two users with the same identity but different transport configurations are
 /// considered equal
 impl<T> Eq for User<T> {}
+
+impl<T> User<T> {
+    pub fn serialize1(&self) -> Result<String> {
+        serde_json::to_string(&self.state).map_err(|e|{
+            Error::External(e.into())
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lets::transport::bucket;
+
+    use crate::{
+        api::user::User,
+        Result,
+    };
+
+    type Transport = bucket::Client;
+
+    #[tokio::test]
+    async fn serialize(
+    ) -> Result<()> {
+        let psk = lets::id::Psk::from_seed(b"Psk1");
+        let user = User::builder().with_transport(Transport::new()).with_psk(psk.to_pskid(), psk).build();
+
+        let serialized: serde_json::Value = r#"{
+            "cursor_store":{},
+            "psk_store":{
+                "8cea20dcc19c4bd897f09170bf748f38":[177,226,96,81,147,120,157,43,52,194,47,236,77,98,111,21,108,228,72,21,68,191,115,34,62,204,28,60,195,250,214,157]
+            },
+            "subscribers":[],
+            "spongos_store":{},
+            "base_branch":"",
+            "lean":false,
+            "topics":[]
+        }"#.parse().unwrap();
+        
+        let parsed_user = user.serialize1().unwrap().parse::<serde_json::Value>().unwrap();
+
+        // serialize then deserialize so the order doesnt matter
+        assert_eq!(serialized, parsed_user);
+        assert_eq!(user.state, serde_json::from_value(parsed_user).unwrap());
+        Ok(())
+    }
+
+}

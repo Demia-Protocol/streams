@@ -22,7 +22,7 @@ impl<F, OS: io::OStream> Ed25519<&ed25519::SecretKey, External<&NBytes<[u8; 64]>
     ) -> Result<&mut Self> {
         let signature = secret_key.sign(hash.inner().as_slice());
         self.stream
-            .try_advance(ed25519::SIGNATURE_LENGTH)?
+            .try_advance(ed25519::Signature::LENGTH)?
             .copy_from_slice(&signature.to_bytes());
         Ok(self)
     }

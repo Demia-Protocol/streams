@@ -68,7 +68,8 @@ use crate::{
 /// you can also use `{:x?}` or `{:#x?}` to render them as hexadecimal arrays.
 ///
 /// [Display]: #impl-Display
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash, serde::Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Address {
     /// The base address of the application
     appaddr: AppAddr,
@@ -156,7 +157,8 @@ impl FromStr for Address {
 }
 
 /// 40 byte Application Instance identifier.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 
 pub struct AppAddr(#[serde(with = "BigArray")] [u8; Self::SIZE]);
 
@@ -241,7 +243,8 @@ impl From<[u8; 40]> for AppAddr {
 }
 
 /// 12 byte Message Identifier unique within the same application.
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MsgId([u8; Self::SIZE]);
 
 impl MsgId {

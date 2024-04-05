@@ -18,6 +18,7 @@ use crate::api::user::INIT_MESSAGE_NUM;
 
 /// Mapping of [`Topic`] to [`InnerCursorStore`]
 #[derive(Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub(crate) struct CursorStore(HashMap<Topic, InnerCursorStore>);
 
 impl CursorStore {
@@ -206,6 +207,7 @@ impl CursorStore {
 /// Represents a branch, and wraps a map from a [`Permissioned`] [`Identifier`] to a cursor. Also
 /// contains the latest [`MsgId`] link that was processed in the branch.
 #[derive(Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub(crate) struct InnerCursorStore {
     /// A mapping of publishers to their cursor
     cursors: HashMap<Permissioned<Identifier>, usize>,

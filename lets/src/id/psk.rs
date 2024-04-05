@@ -11,7 +11,8 @@ use spongos::{
 };
 
 /// A Pre-Shared Key for use in Read based permissioning
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Psk([u8; 32]);
 
 impl Psk {
@@ -59,6 +60,27 @@ impl AsMut<[u8]> for Psk {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug)]
 pub struct PskId([u8; 16]);
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for PskId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+            serializer.serialize_str(&hex::encode(self))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for PskId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+        let bytes = hex::decode(alloc::string::String::deserialize(deserializer)?).unwrap();
+        let mut array = [0u8; 16];
+        array.copy_from_slice(&bytes);
+        Ok(PskId(array))
+    }
+}
 
 impl PskId {
     /// Creates a new [`PskId`] wrapper around the provided bytes

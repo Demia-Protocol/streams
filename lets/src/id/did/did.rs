@@ -58,6 +58,7 @@ pub(crate) async fn get_exchange_method(info: &DIDUrlInfo) -> SpongosResult<Veri
 // TODO: Remove redundant layerings now that accounts don't exist
 /// Type of `DID` implementation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DID {
     /// Private Key based [`DIDInfo`], manually specifying key pairs
     PrivateKey(DIDInfo),
@@ -117,6 +118,8 @@ where
 
 /// Details of a `DID` implementation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DIDInfo {
     /// Document retrieval information
     url_info: DIDUrlInfo,
