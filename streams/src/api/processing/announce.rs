@@ -157,11 +157,17 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
         // Check Topic
         let publisher = preparsed.header().publisher().clone();
 
         // Unwrap message
         let announcement = announcement::Unwrap::default();
+        
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+        
         let (message, spongos) = preparsed
             .unwrap(announcement)
             .await
@@ -192,7 +198,7 @@ impl<T> User<T> {
         self.state.base_branch = topic.clone();
         self.state.stream_address = Some(address);
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 
     /// Processes a branch announcement message, creating a new branch in [`CursorStore`], carrying
@@ -206,6 +212,8 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         // Retrieve header values
         let prev_topic = self
             .topic_by_hash(preparsed.header().topic_hash())
@@ -226,6 +234,10 @@ impl<T> User<T> {
         self.state
             .cursor_store
             .insert_cursor(&prev_topic, permission, cursor);
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -266,6 +278,6 @@ impl<T> User<T> {
         // Update branch links
         self.set_latest_link(new_topic.clone(), address.relative());
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 }

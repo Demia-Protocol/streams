@@ -110,7 +110,12 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
         // Cursor is not stored, as user is unsubscribing
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -137,6 +142,6 @@ impl<T> User<T> {
         // Store message content into stores
         self.remove_subscriber(message.payload().content().subscriber_identifier());
 
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 }

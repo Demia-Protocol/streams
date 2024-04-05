@@ -120,7 +120,12 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
         // Cursor is not stored, as cursor is only tracked for subscribers with write permissions
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
 
         // Unwrap message
         let linked_msg_address = preparsed
@@ -132,7 +137,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let user_id = self
@@ -151,7 +156,7 @@ impl<T> User<T> {
 
         // Store message content into stores
         let subscriber_identifier = message.payload().content().subscriber_identifier().clone();
-        let final_message = Message::from_lets_message(address, message);
+        let final_message = Message::from_lets_message(address, pk, sig, raw, message);
         self.add_subscriber(subscriber_identifier);
 
         Ok(final_message)

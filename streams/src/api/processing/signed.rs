@@ -146,10 +146,17 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         let topic = self
             .topic_by_hash(preparsed.header().topic_hash())
             .ok_or(Error::UnknownTopic(*preparsed.header().topic_hash()))?;
         let publisher = preparsed.header().publisher();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         let permission = self
             .state
             .cursor_store
@@ -173,7 +180,7 @@ impl<T> User<T> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let signed_packet = signed_packet::Unwrap::new(&mut linked_msg_spongos);
@@ -187,6 +194,6 @@ impl<T> User<T> {
 
         // Store message content into stores
         self.set_latest_link(topic, address.relative());
-        Ok(Message::from_lets_message(address, message))
+        Ok(Message::from_lets_message(address, pk, sig, raw, message))
     }
 }

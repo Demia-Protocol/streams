@@ -248,6 +248,8 @@ impl<T> User<T> {
         address: Address,
         preparsed: PreparsedMessage,
     ) -> Result<Message> {
+        let raw = preparsed.transport_msg().body().clone();
+
         let stream_address = self
             .stream_address()
             .ok_or(Error::NoStream("handling a keyload"))?;
@@ -294,6 +296,11 @@ impl<T> User<T> {
             .collect();
 
         let user_id = self.state.user_id.as_mut();
+
+        // Retrieve public key and signature for Message return
+        let pk = preparsed.transport_msg().pk().clone();
+        let sig = preparsed.transport_msg().sig().clone();
+
         // TODO: Remove Psk from Identity and Identifier, and manage it as a complementary permission
         let keyload = Unwrap::new(
             &mut announcement_spongos,
@@ -326,7 +333,7 @@ impl<T> User<T> {
         }
 
         // Have to make message before setting branch links due to immutable borrow in keyload::unwrap
-        let final_message = Message::from_lets_message(address, message);
+        let final_message = Message::from_lets_message(address, pk, sig,raw, message);
 
         // Store message content into stores
         for subscriber in subscribers {
