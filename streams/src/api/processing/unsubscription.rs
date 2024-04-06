@@ -127,7 +127,7 @@ impl<'a, T> User<T> where T: Transport<'a> {
                 // Spongos must be cloned because wrapping mutates it
                 *spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let unsubscription = unsubscription::Unwrap::new(&mut linked_msg_spongos);

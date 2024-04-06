@@ -136,7 +136,7 @@ struct MessagesState<'a, T> {
     cache: HashMap<MsgId, Message>,
 }
 
-impl<'a, T: Send> MessagesState<'a, T> {
+impl<'a, T: Send + Sync> MessagesState<'a, T> {
     fn new(
         user: &'a mut User<T>,
         ids_stack: Vec<(Topic, Identifier, usize)>,

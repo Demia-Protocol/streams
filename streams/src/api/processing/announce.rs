@@ -249,7 +249,7 @@ impl<'a, T> User<T> where T: Transport<'a> {
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
-                return Ok(Message::orphan(address, preparsed));
+                return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
         let branch_announcement = branch_announcement::Unwrap::new(&mut linked_msg_spongos);

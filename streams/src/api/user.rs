@@ -62,24 +62,24 @@ pub(crate) const INIT_MESSAGE_NUM: usize = 1; // First non-reserved message numb
 /// The state of a user, mapping publisher cursors and link states for message processing.
 #[derive(PartialEq, Eq, Default, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-struct State {
+pub(crate) struct State {
     /// Users' [`Identity`] information, contains keys and logic for signing and verification.
     ///
     /// None if the user is not created with an identity
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    user_id: Option<Identity>,
+    pub(crate) user_id: Option<Identity>,
 
     /// [`Address`] of the stream announcement message.
     ///
     /// None if channel is not created or user is not subscribed.
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    stream_address: Option<Address>,
+    pub(crate) stream_address: Option<Address>,
 
     /// [`Identifier`] of the channel author.
     ///
     /// None if channel is not created or user is not subscribed.
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    author_identifier: Option<Identifier>,
+    pub(crate) author_identifier: Option<Identifier>,
 
     /// Users' trusted public keys together with additional sequencing info: (msgid, seq_no) mapped
     /// by branch topic Vec.
@@ -621,7 +621,7 @@ where
             .recv_message(latest)
             .await
             .map_err(|e| Error::Transport(latest, "receive message", e))?;
-        let mut preparsed: PreparsedMessage = msg.parse_header().await
+        let mut preparsed: lets::message::PreparsedMessage = msg.parse_header().await
             .map_err(|e| Error::Unwrapping("header", latest, e))?;
         let mut header = preparsed.header();
 
@@ -759,71 +759,6 @@ where
     /// Create a new [`MessageBuilder`] instance.
     pub fn message<P: Default>(&mut self) -> MessageBuilder<P, T> {
         MessageBuilder::new(self)
-    }
-
-    pub(crate) fn update_permissions(
-        &mut self,
-        topic: &Topic,
-        permission: Permissioned<Identifier>,
-        cursor: Option<usize>,
-    ) {
-        let cursor = cursor.unwrap_or(INIT_MESSAGE_NUM);
-
-        if let Some(c) = self
-            .state
-            .cursor_store
-            .get_cursor(&topic, permission.identifier())
-        {
-            self.state.cursor_store.insert_cursor(&topic, permission, c);
-        } else {
-            self.state
-                .cursor_store
-                .insert_cursor(&topic, permission, cursor);
-        }
-    }
-
-    pub(crate) fn check_and_update_permission(
-        &mut self,
-        action: PermissionType,
-        topic: &Topic,
-        mut permission: Permissioned<Identifier>,
-    ) -> Result<Permissioned<Identifier>> {
-        if action == PermissionType::Read {
-            return Ok(permission);
-        }
-
-        let mut change = false;
-        if let Permissioned::ReadWrite(_, duration) = permission {
-            println!("permisison check: {:?}", duration);
-            change = match duration {
-                PermissionDuration::Perpetual => false,
-                PermissionDuration::Unix(t) => t < self.last_timestamp(),
-                PermissionDuration::NumBranchMsgs(n) => {
-                    n < self
-                        .state
-                        .cursor_store
-                        .get_cursor(topic, &*permission)
-                        .unwrap_or(0)
-                        .try_into()
-                        .unwrap()
-                }
-                PermissionDuration::NumPublishedmsgs(n) => {
-                    n < self
-                        .state
-                        .cursor_store
-                        .total_msg_for_id(&*permission)
-                        .try_into()
-                        .unwrap()
-                }
-            };
-        };
-
-        if change {
-            permission = Permissioned::Read(permission.identifier().clone());
-            // TODO: set old cursor and update when permisisons get updated to write again
-            self.update_permissions(topic, permission.clone(), None);
-        }
-        Ok(permission)
     }
 
     pub(crate) async fn send_message(&mut self, address: Address, msg: TransportMessage) -> Result<TSR> {
