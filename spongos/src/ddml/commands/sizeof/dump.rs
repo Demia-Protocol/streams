@@ -5,7 +5,7 @@ use crate::{
 
 /// Displays context size
 impl Dump for Context {
-    fn dump<'a>(&mut self, args: core::fmt::Arguments<'a>) -> Result<&mut Self> {
+    fn dump(&mut self, args: core::fmt::Arguments) -> Result<&mut Self> {
         println!("{}: size=[{}]", args, self.size);
         Ok(self)
     }

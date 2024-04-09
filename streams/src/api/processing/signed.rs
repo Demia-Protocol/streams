@@ -113,7 +113,7 @@ where
 
         // Attempt to send message
         let message_address = Address::new(stream_address.base(), rel_address);
-        if !self.transport.recv_message(message_address).await.is_err() {
+        if self.transport.recv_message(message_address).await.is_ok() {
             return Err(Error::AddressUsed("signed packet", message_address));
         }
         let send_response = self.send_message(message_address, transport_msg).await?;

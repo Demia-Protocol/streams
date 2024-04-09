@@ -179,7 +179,7 @@ where
     async fn unwrap(&mut self, subscription: &mut Unwrap<'a>) -> Result<&mut Self> {
         let ctx = self.join(subscription.initial_state)?;
         ctx.decrypt(
-            &mut subscription.author_id,
+            subscription.author_id,
             &mut subscription.unsubscribe_key,
         )
         .await?

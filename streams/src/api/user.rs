@@ -2,7 +2,6 @@
 use alloc::{
     borrow::ToOwned,
     boxed::Box,
-    format,
     string::{String, ToString},
     vec::Vec,
 };
@@ -244,7 +243,7 @@ impl<T> User<T> {
     }
 
     /// Returns an iterator over all known branch [topics](`Topic`)
-    pub fn topics(&self) -> impl Iterator<Item = &Topic> + ExactSizeIterator {
+    pub fn topics(&self) -> impl ExactSizeIterator<Item = &Topic> {
         self.state.topics.iter()
     }
 
@@ -511,13 +510,13 @@ where
         if let Some(c) = self
             .state
             .cursor_store
-            .get_cursor(&topic, permission.identifier())
+            .get_cursor(topic, permission.identifier())
         {
-            self.state.cursor_store.insert_cursor(&topic, permission, c);
+            self.state.cursor_store.insert_cursor(topic, permission, c);
         } else {
             self.state
                 .cursor_store
-                .insert_cursor(&topic, permission, cursor);
+                .insert_cursor(topic, permission, cursor);
         }
     }
 
@@ -547,7 +546,7 @@ where
                     let num: u32 = self
                         .state
                         .cursor_store
-                        .get_cursor(topic, &*permission)
+                        .get_cursor(topic, &permission)
                         .unwrap_or(0)
                         .try_into()
                         .unwrap();
@@ -557,7 +556,7 @@ where
                     let num: u32 = self
                         .state
                         .cursor_store
-                        .total_msg_for_id(&*permission)
+                        .total_msg_for_id(&permission)
                         .try_into()
                         .unwrap();
                     num > n
@@ -626,7 +625,7 @@ where
     ) -> Result<Messages<T>> {
         let topic = topic.into();
         let addr = AppAddr::gen(
-            &self.state.author_identifier.as_ref().unwrap(),
+            self.state.author_identifier.as_ref().unwrap(),
             &self.state.base_branch,
         );
         let mut latest = Address::new(
@@ -650,7 +649,7 @@ where
 
         // Check if the selector precedes the latest message already,
         // meaning we need to go forward before retuning any messages.
-        let mut forward = selector.is_from_header(&header, Some(latest));
+        let mut forward = selector.is_from_header(header, Some(latest));
 
         // sync up only if we really need to, to prevent double fetching
         if forward {
@@ -660,7 +659,7 @@ where
                 msgs.insert(m.address().relative(), m.clone());
                 latest = m.address();
                 header = preparsed.header();
-                forward = !selector.is_from_header(&header, Some(latest));
+                forward = !selector.is_from_header(header, Some(latest));
             }
         }
 
@@ -747,7 +746,7 @@ where
             .map_err(|e| Error::Wrapped("wrap announce", e))?;
 
         // Attempt to send message
-        if !self.transport.recv_message(stream_address).await.is_err() {
+        if self.transport.recv_message(stream_address).await.is_ok() {
             return Err(Error::Setup(
                 "Cannot create a channel, announce address already in use",
             ));
@@ -1022,22 +1021,23 @@ impl<T> Debug for User<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FormatResult {
         write!(
             f,
-            "\n* identifier: <{:?}>\n* topic: {}\n{:?}\n* PSKs: \n{}\n* messages:\n{}\n* lean: {}\n",
+            "\n* identifier: <{:?}>\n* topic: {}\n{:?}\n* PSKs: \n",
             self.identifier(),
             self.base_branch(),
             self.state.cursor_store,
-            self.state
-                .psk_store
-                .keys()
-                .map(|pskid| format!("\t<{:?}>\n", pskid))
-                .collect::<String>(),
-            self.state
-                .spongos_store
-                .keys()
-                .map(|key| format!("\t<{}>\n", key))
-                .collect::<String>(),
-            self.state.lean
-        )
+        )?;
+    
+        for pskid in self.state.psk_store.keys() {
+            writeln!(f, "\t<{:?}>", pskid)?;
+        }
+    
+        writeln!(f, "* messages:")?;
+    
+        for key in self.state.spongos_store.keys() {
+            writeln!(f, "\t<{}>", key)?;
+        }
+    
+        write!(f, "* lean: {}", self.state.lean)
     }
 }
 

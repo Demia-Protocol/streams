@@ -158,19 +158,13 @@ where
                 .subscribers
                 .clone()
                 .into_iter()
-                .filter(|s| match s.identifier() {
-                    Identifier::DID(_) => true,
-                    _ => false,
-                })
+                .filter(|s| matches!(s.identifier(), Identifier::DID(_)))
                 .collect::<Vec<_>>();
             let ed_subscribers = keyload
                 .subscribers
                 .clone()
                 .into_iter()
-                .filter(|s| match s.identifier() {
-                    Identifier::Ed25519(_) => true,
-                    _ => false,
-                })
+                .filter(|s| matches!(s.identifier(), Identifier::Ed25519(_)))
                 .collect::<Vec<_>>();
 
             let n_did_subscribers = Size::new(did_subscribers.len());
@@ -246,19 +240,13 @@ where
                 .subscribers
                 .clone()
                 .into_iter()
-                .filter(|s| match s.identifier() {
-                    Identifier::DID(_) => true,
-                    _ => false,
-                })
+                .filter(|s| matches!(s.identifier(), Identifier::DID(_)))
                 .collect::<Vec<_>>();
             let ed_subscribers = keyload
                 .subscribers
                 .clone()
                 .into_iter()
-                .filter(|s| match s.identifier() {
-                    Identifier::Ed25519(_) => true,
-                    _ => false,
-                })
+                .filter(|s| matches!(s.identifier(), Identifier::Ed25519(_)))
                 .collect::<Vec<_>>();
 
             let n_did_subscribers = Size::new(did_subscribers.len());
@@ -298,7 +286,7 @@ where
                 .mask(NBytes::new(&keyload.key))?;
         }
         self.absorb(External::new(&NBytes::new(&keyload.key)))?
-            .sign(&mut keyload.author_id)
+            .sign(keyload.author_id)
             .await?
             .commit()?;
         Ok(self)
@@ -383,7 +371,7 @@ where
 
             self.absorb(&mut n_did_subscribers)?;
             unwrap_subscribers(
-                &mut self,
+                self,
                 keyload,
                 n_did_subscribers,
                 &mut key,
@@ -393,7 +381,7 @@ where
 
             self.absorb(&mut n_ed_subscribers)?;
             unwrap_subscribers(
-                &mut self,
+                self,
                 keyload,
                 n_ed_subscribers,
                 &mut key,
@@ -440,6 +428,7 @@ where
 enum SubscriberKind {
     Ed25519,
     #[cfg(feature = "did")]
+    #[allow(clippy::upper_case_acronyms)]
     DID,
 }
 async fn unwrap_subscribers<'a, IS: io::IStream>(

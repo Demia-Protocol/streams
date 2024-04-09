@@ -34,11 +34,11 @@ pub(crate) enum MessageType {
     Unsubscription,
 }
 
-impl Into<PermissionType> for MessageType {
-    fn into(self) -> PermissionType {
-        match self {
-            Self::SignedPacket | Self::TaggedPacket => PermissionType::ReadWrite,
-            Self::Announcement | Self::BranchAnnouncement | Self::Keyload => PermissionType::Admin,
+impl From<MessageType> for PermissionType {
+    fn from(val: MessageType) -> Self {
+        match val {
+            MessageType::SignedPacket | MessageType::TaggedPacket => PermissionType::ReadWrite,
+            MessageType::Announcement | MessageType::BranchAnnouncement | MessageType::Keyload => PermissionType::Admin,
             _ => PermissionType::Read,
         }
     }

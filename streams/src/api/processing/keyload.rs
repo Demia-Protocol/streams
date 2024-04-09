@@ -172,12 +172,11 @@ where
         let psk_ids_with_psks = psk_ids
             .into_iter()
             .map(|pskid| {
-                let psk = self
+                let psk = *self
                     .state
                     .psk_store
                     .get(&pskid)
-                    .ok_or(Error::UnknownPsk(pskid))?
-                    .clone();
+                    .ok_or(Error::UnknownPsk(pskid))?;
                 Ok((pskid, psk))
             })
             .collect::<Result<Vec<(PskId, Psk)>>>()?; // collect to handle possible error
@@ -208,7 +207,7 @@ where
 
         // Attempt to send message
         let message_address = Address::new(stream_address.base(), rel_address);
-        if !self.transport.recv_message(message_address).await.is_err() {
+        if self.transport.recv_message(message_address).await.is_ok() {
             return Err(Error::AddressUsed("keyload", message_address));
         }
 

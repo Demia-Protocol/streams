@@ -104,7 +104,7 @@ where
             .await
             .map_err(|e| Error::Wrapped("wrap new branch", e))?;
 
-        if !self.transport.recv_message(address).await.is_err() {
+        if self.transport.recv_message(address).await.is_ok() {
             return Err(Error::AddressUsed("new branch", address));
         }
 

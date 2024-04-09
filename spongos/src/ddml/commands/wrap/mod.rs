@@ -69,19 +69,19 @@ trait Wrap {
         T: AsRef<[u8]>;
     /// Encode a single byte into the context
     fn wrap_u8(&mut self, u: Uint8) -> Result<&mut Self> {
-        self.wrapn(&u.to_bytes())
+        self.wrapn(u.to_bytes())
     }
     /// Encode two bytes into the context
     fn wrap_u16(&mut self, u: Uint16) -> Result<&mut Self> {
-        self.wrapn(&u.to_bytes())
+        self.wrapn(u.to_bytes())
     }
     /// Encode four bytes into the context
     fn wrap_u32(&mut self, u: Uint32) -> Result<&mut Self> {
-        self.wrapn(&u.to_bytes())
+        self.wrapn(u.to_bytes())
     }
     /// Encode eight bytes into the context
     fn wrap_u64(&mut self, u: Uint64) -> Result<&mut Self> {
-        self.wrapn(&u.to_bytes())
+        self.wrapn(u.to_bytes())
     }
     /// Encode the number of bytes a [`Size`] needs to encode, then encode the [`Size`] value one
     /// byte at a time

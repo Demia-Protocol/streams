@@ -95,7 +95,7 @@ pub enum Error {
 
     #[cfg(feature = "did")]
     #[error("Encountered DID error while trying to {0}; Error: {1}")]
-    Did(&'static str, IdentityError),
+    Did(&'static str, Box<IdentityError>),
 
     #[error("{0} is not encoded in {1} or the encoding is incorrect: {2:?}")]
     Encoding(&'static str, &'static str, Box<Error>),
@@ -146,7 +146,7 @@ pub enum Error {
 impl Error {
     #[cfg(feature = "did")]
     pub fn did<T: Into<IdentityError>>(did: &'static str, e: T) -> Self {
-        Self::Did(did, e.into())
+        Self::Did(did, Box::new(e.into()))
     }
 
     pub fn utf(m: &'static str, error: FromUtf8Error) -> Self {

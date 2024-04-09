@@ -185,9 +185,9 @@ pub enum PermissionType {
 ///
 /// Returns Some(PermissionType) if the conversion is successful,
 /// otherwise returns None.
-impl Into<u8> for PermissionType {
-    fn into(self) -> u8 {
-        match self {
+impl From<PermissionType> for u8 {
+    fn from(val: PermissionType) -> Self {
+        match val {
             PermissionType::Read => READ_PERMISSION,
             PermissionType::ReadWrite => READ_WRITE_PERMISSION,
             PermissionType::Admin => ADMIN_PERMISSION,

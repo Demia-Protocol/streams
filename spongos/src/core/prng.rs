@@ -59,15 +59,15 @@ where
 {
     fn next_u32(&mut self) -> u32 {
         self.inc();
-        u32::from_le_bytes(self.spongos.sponge(&self.nonce))
+        u32::from_le_bytes(self.spongos.sponge(self.nonce))
     }
     fn next_u64(&mut self) -> u64 {
         self.inc();
-        u64::from_le_bytes(self.spongos.sponge(&self.nonce))
+        u64::from_le_bytes(self.spongos.sponge(self.nonce))
     }
     fn fill_bytes(&mut self, dest: &mut [u8]) {
         self.inc();
-        self.spongos.sponge_mut(&self.nonce, dest);
+        self.spongos.sponge_mut(self.nonce, dest);
     }
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
         self.fill_bytes(dest);

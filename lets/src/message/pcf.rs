@@ -207,7 +207,7 @@ impl PayloadFrameNum {
             false => Err(Error::InvalidSize(
                 "payload-frame-num value at most",
                 22,
-                payload_frame_num.try_into().unwrap(),
+                payload_frame_num.into(),
             )),
         }
     }

@@ -12,12 +12,9 @@ where
     I: iter::Iterator,
     C: for<'a> FnMut(&'a mut Self, I::Item) -> Result<&'a mut Self>,
 {
-    fn repeated(&mut self, values_iter: I, mut value_handle: C) -> Result<&mut Self> {
-        values_iter.fold(Ok(self), |rctx, item| -> Result<&mut Self> {
-            match rctx {
-                Ok(ctx) => value_handle(ctx, item),
-                Err(e) => Err(e),
-            }
+    fn repeated(&mut self, mut values_iter: I, mut value_handle: C) -> Result<&mut Self> {
+        values_iter.try_fold(self, |ctx, item| {
+            value_handle(ctx, item)
         })
     }
 }

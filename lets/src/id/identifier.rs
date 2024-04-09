@@ -68,7 +68,7 @@ pub enum Identifier {
 impl core::fmt::Debug for Identifier {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::Ed25519(arg0) => f.debug_tuple("Ed25519").field(&hex::encode(&arg0)).finish(),
+            Self::Ed25519(arg0) => f.debug_tuple("Ed25519").field(&hex::encode(arg0)).finish(),
             #[cfg(feature = "did")]
             Self::DID(url_info) => f
                 .debug_tuple("DID")
@@ -92,7 +92,7 @@ impl Identifier {
 
     pub async fn sig_pk(&self) -> Result<ed25519::PublicKey> {
         match self {
-            Identifier::Ed25519(pk) => Ok(pk.clone()),
+            Identifier::Ed25519(pk) => Ok(*pk),
             #[cfg(feature = "did")]
             Identifier::DID(url_info) => {
                 let doc = resolve_document(url_info).await?;

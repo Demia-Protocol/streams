@@ -111,7 +111,7 @@ pub trait Guard {
 /// Dump context info into stdout.
 /// Use it like this: `ctx.dump(format_args!("checkpoint"))`
 pub trait Dump {
-    fn dump<'a>(&mut self, args: core::fmt::Arguments<'a>) -> Result<&mut Self>;
+    fn dump(&mut self, args: core::fmt::Arguments) -> Result<&mut Self>;
 }
 
 /// Implementation of command traits for message size calculation.

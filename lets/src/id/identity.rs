@@ -182,7 +182,7 @@ impl IdentityKind {
                 })?;
 
                 // Join the DID identifier with the key fragment of the verification method
-                let fragment = if !fragment.starts_with("#") {
+                let fragment = if !fragment.starts_with('#') {
                     format!("#{fragment}")
                 } else {
                     fragment
@@ -204,7 +204,7 @@ impl IdentityKind {
 
                 let location = Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
                 let sig = stronghold
-                    .ed25519_sign(location, &data)
+                    .ed25519_sign(location, data)
                     .await
                     .map_err(|e| SpongosError::Context("signing hash", e.to_string()))?;
                 Ok(Ed25519Sig::from_bytes(sig))
@@ -336,7 +336,7 @@ where
                             .squeeze(External::new(&mut NBytes::new(&mut hash)))?;
 
                         // Join the DID identifier with the key fragment of the verification method
-                        let fragment = if !fragment.starts_with("#") {
+                        let fragment = if !fragment.starts_with('#') {
                             format!("#{fragment}")
                         } else {
                             fragment

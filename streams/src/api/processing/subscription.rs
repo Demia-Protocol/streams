@@ -88,7 +88,7 @@ where
 
         // Attempt to send message
         let has_msg = self.transport.recv_message(message_address).await;
-        if !has_msg.is_err() {
+        if has_msg.is_ok() {
             return Err(Error::AddressUsed("subscribe", message_address));
         }
 
