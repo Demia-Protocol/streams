@@ -86,7 +86,10 @@ impl CursorStore {
     /// Returns:
     /// The total cursor of all topics (Num msg sent)
     pub(crate) fn total_msg_for_id(&self, id: &Identifier) -> usize {
-        self.cursors().filter(|c| &**c.1 == id).map(|c| c.2 - INIT_MESSAGE_NUM).sum()
+        self.cursors()
+            .filter(|c| &**c.1 == id)
+            .map(|c| c.2 - INIT_MESSAGE_NUM)
+            .sum()
     }
 
     /// Given a [`Topic`] and an [`Identifier`], return the cursor if it exists

@@ -15,7 +15,7 @@ use crate::{
 /// Binary network Message representation.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TransportMessage{
+pub struct TransportMessage {
     body: Vec<u8>,
     pk: Vec<u8>,
     sig: Vec<u8>,
@@ -27,7 +27,11 @@ impl TransportMessage {
     /// # Arguments
     /// * `body`: The body of the message
     pub fn new(body: Vec<u8>) -> Self {
-        Self{body, pk: vec![], sig: vec![]}
+        Self {
+            body,
+            pk: vec![],
+            sig: vec![],
+        }
     }
 
     /// Insert public key

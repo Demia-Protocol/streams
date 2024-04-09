@@ -118,7 +118,6 @@ where
 
 /// Details of a `DID` implementation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
-
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DIDInfo {
     /// Document retrieval information

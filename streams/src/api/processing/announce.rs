@@ -13,12 +13,6 @@ use lets::{
     transport::Transport,
 };
 
-#[cfg(feature = "did")]
-use lets::id::{
-    did::{StrongholdSecretManager, DID},
-    IdentityKind,
-};
-
 // Local
 use crate::{
     api::{message::Message, send_response::SendResponse, user::INIT_MESSAGE_NUM},
@@ -145,7 +139,10 @@ where
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> {
+impl<'a, T> User<T>
+where
+    T: Transport<'a>,
+{
     /// Processes an announcement message, binding a [`User`] to the stream announced in the
     /// message.
     ///
@@ -163,11 +160,11 @@ impl<'a, T> User<T> where T: Transport<'a> {
 
         // Unwrap message
         let announcement = announcement::Unwrap::default();
-        
+
         // Retrieve public key and signature for Message return
         let pk = preparsed.transport_msg().pk().clone();
         let sig = preparsed.transport_msg().sig().clone();
-        
+
         let (message, spongos) = preparsed
             .unwrap(announcement)
             .await

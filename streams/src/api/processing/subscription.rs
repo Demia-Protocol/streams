@@ -1,6 +1,5 @@
 // Rust
 
-
 // 3rd-party
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
@@ -11,12 +10,6 @@ use lets::{
     address::{Address, MsgId},
     message::{Message as LetsMessage, PreparsedMessage, TransportMessage, HDF, PCF},
     transport::Transport,
-};
-
-#[cfg(feature = "did")]
-use lets::id::{
-    did::{StrongholdSecretManager, DID},
-    IdentityKind,
 };
 
 // Local
@@ -109,7 +102,10 @@ where
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> {
+impl<'a, T> User<T>
+where
+    T: Transport<'a>,
+{
     /// Processes a [`User`] subscription message, storing the subscriber [`Identifier`].
     ///
     /// # Arguments:

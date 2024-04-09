@@ -22,7 +22,10 @@ const BASE_BRANCH: &str = "BASE_BRANCH";
 const BRANCH1: &str = "BRANCH1";
 const BRANCH2: &str = "BRANCH2";
 
-pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_seed: &str) -> Result<()> {
+pub(crate) async fn example<SR, T: GenericTransport<SR>>(
+    transport: T,
+    author_seed: &str,
+) -> Result<()> {
     let psk = Psk::from_seed("A pre shared key");
 
     let mut author = User::builder()
@@ -45,8 +48,14 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .build();
 
     // Confirm that users have id's
-    let subscriber_a_id = subscriber_a.identifier().expect("subscriber A should have identifier").clone();
-    let subscriber_b_id = subscriber_b.identifier().expect("subscriber B should have identifier").clone();
+    let subscriber_a_id = subscriber_a
+        .identifier()
+        .expect("subscriber A should have identifier")
+        .clone();
+    let subscriber_b_id = subscriber_b
+        .identifier()
+        .expect("subscriber B should have identifier")
+        .clone();
     assert!(subscriber_c.identifier().is_none());
 
     println!("> Author creates stream and sends its announcement");
@@ -66,7 +75,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     print_user("Subscriber A", &subscriber_a);
 
     println!("> Author reads subscription of subscriber A");
-    let subscription_a_as_author = author.receive_message(subscription_a_as_a.address()).await?;
+    let subscription_a_as_author = author
+        .receive_message(subscription_a_as_a.address())
+        .await?;
     print_user("Author", &author);
 
     println!("> Author creates a new branch");
@@ -75,7 +86,9 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     print_send_result(&branch_announcement);
     print_user("Author", &author);
 
-    println!("> Author issues keyload for every user subscribed so far [SubscriberA, PSK] in Branch 1");
+    println!(
+        "> Author issues keyload for every user subscribed so far [SubscriberA, PSK] in Branch 1"
+    );
     let keyload_as_author = author.send_keyload_for_all(BRANCH1).await?;
     print_send_result(&keyload_as_author);
     print_user("Author", &author);
@@ -86,13 +99,11 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
         .try_next()
         .await?
         .expect("Subscriber A did not receive the expected branch announcement");
-    assert!(
-        branch_1_ann_as_a
-            .as_branch_announcement()
-            .expect("expected branch announcement, found something else")
-            .topic
-            .eq(&BRANCH1.into())
-    );
+    assert!(branch_1_ann_as_a
+        .as_branch_announcement()
+        .expect("expected branch announcement, found something else")
+        .topic
+        .eq(&BRANCH1.into()));
     print_user("Subscriber A", &subscriber_a);
     assert_eq!(subscriber_a.sync().await?, 1);
 
@@ -102,7 +113,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     author
         .send_keyload(
             BRANCH1,
-            vec![Permissioned::ReadWrite(subscriber_a_id.clone(), write_permission_duration)],
+            vec![Permissioned::ReadWrite(
+                subscriber_a_id.clone(),
+                write_permission_duration,
+            )],
             vec![],
         )
         .await?;

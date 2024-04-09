@@ -4,7 +4,11 @@ use core::{fmt::Formatter, ops::Range};
 // IOTA
 
 // Streams
-use lets::{address::Address, id::Identifier, message::{TopicHash, HDF}};
+use lets::{
+    address::Address,
+    id::Identifier,
+    message::{TopicHash, HDF},
+};
 
 use crate::Message;
 
@@ -37,7 +41,7 @@ impl Selector {
         self.is_from_header(message.header(), Some(message.address))
     }
 
-    pub fn is_from_header(&self, header: &HDF, address: Option<Address>) ->bool {
+    pub fn is_from_header(&self, header: &HDF, address: Option<Address>) -> bool {
         match self {
             Selector::Address(a) => {
                 if let Some(address) = address {
@@ -45,7 +49,7 @@ impl Selector {
                 } else {
                     false
                 }
-            },
+            }
             Selector::Topic(topic) => header.topic_hash() == topic,
             Selector::Identifier(identifier) => header.publisher() == identifier,
             Selector::Level(range) => range.contains(&header.sequence()),

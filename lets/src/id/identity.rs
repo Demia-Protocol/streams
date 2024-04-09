@@ -147,7 +147,8 @@ impl Default for IdentityKind {
         #[cfg(not(feature = "did"))]
         {
             // unwrap is fine because we are using default
-            let signing_private_key = ed25519::SecretKey::from_bytes(&[0; ed25519::SecretKey::LENGTH]);
+            let signing_private_key =
+                ed25519::SecretKey::from_bytes(&[0; ed25519::SecretKey::LENGTH]);
             Self::Ed25519(Ed25519::new(signing_private_key))
         }
         #[cfg(feature = "did")]

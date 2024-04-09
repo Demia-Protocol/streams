@@ -12,7 +12,7 @@ use core::fmt::{Debug, Formatter, Result as FormatResult};
 use async_trait::async_trait;
 use futures::{future, TryStreamExt};
 use hashbrown::{HashMap, HashSet};
-use rand::{Rng};
+use rand::Rng;
 
 // IOTA
 
@@ -21,8 +21,8 @@ use lets::{
     address::{Address, AppAddr, MsgId},
     id::{Identifier, Identity, PermissionDuration, PermissionType, Permissioned, Psk, PskId},
     message::{
-        ContentSizeof, ContentUnwrap, ContentWrap, Message as LetsMessage, Topic,
-        TopicHash, TransportMessage, HDF, PCF,
+        ContentSizeof, ContentUnwrap, ContentWrap, Message as LetsMessage, Topic, TopicHash,
+        TransportMessage, HDF, PCF,
     },
     transport::Transport,
 };
@@ -49,9 +49,7 @@ use crate::{
         messages::Messages, send_response::SendResponse, user::message_types::MessageType,
         user_builder::UserBuilder,
     },
-    message::{
-        announcement, message_types,
-    },
+    message::{announcement, message_types},
     Error, Result, Selector,
 };
 
@@ -66,19 +64,28 @@ pub(crate) struct State {
     /// Users' [`Identity`] information, contains keys and logic for signing and verification.
     ///
     /// None if the user is not created with an identity
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pub(crate) user_id: Option<Identity>,
 
     /// [`Address`] of the stream announcement message.
     ///
     /// None if channel is not created or user is not subscribed.
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pub(crate) stream_address: Option<Address>,
 
     /// [`Identifier`] of the channel author.
     ///
     /// None if channel is not created or user is not subscribed.
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pub(crate) author_identifier: Option<Identifier>,
 
     /// Users' trusted public keys together with additional sequencing info: (msgid, seq_no) mapped
@@ -371,8 +378,6 @@ impl<T> User<T> {
         self.state.cursor_store.get_latest_link(topic)
     }
 
-    
-
     /// Creates an encrypted, serialised representation of a [`User`] `State` for backup and
     /// recovery.
     ///
@@ -432,8 +437,10 @@ impl<T> User<T> {
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> {
-
+impl<'a, T> User<T>
+where
+    T: Transport<'a>,
+{
     /// Parse and process a [`TransportMessage`] dependent on its type.
     ///
     /// # Arguments
@@ -467,14 +474,14 @@ impl<'a, T> User<T> where T: Transport<'a> {
 
     /// The function `has_permission` checks if the user has the required permission for a
     /// specific action on a given topic.
-    /// 
+    ///
     /// Arguments:
-    /// 
+    ///
     /// * `topic`: The topic for whichv you want to check the permission.
     /// * `action`: the type of permission being checked for a specific topic.
-    /// 
+    ///
     /// Returns:
-    /// 
+    ///
     pub fn has_permission(&self, topic: &Topic, action: PermissionType) -> bool {
         let id = self.identifier();
         if id.is_none() {
@@ -482,15 +489,14 @@ impl<'a, T> User<T> where T: Transport<'a> {
             return false;
         }
 
-        let perms = self.state.cursor_store.get_permission(topic, self.identifier().unwrap());
+        let perms = self
+            .state
+            .cursor_store
+            .get_permission(topic, self.identifier().unwrap());
         match (perms, action) {
-            (None, _) | (Some(_), PermissionType::Read)  => true, // TODO: make it so we check if we can decrypt
-            (Some(p), PermissionType::ReadWrite) => {
-                !(PermissionType::Read == p.into())
-            }
-            (Some(p), PermissionType::Admin) => {
-                PermissionType::Admin == p.into()
-            }
+            (None, _) | (Some(_), PermissionType::Read) => true, // TODO: make it so we check if we can decrypt
+            (Some(p), PermissionType::ReadWrite) => !(PermissionType::Read == p.into()),
+            (Some(p), PermissionType::Admin) => PermissionType::Admin == p.into(),
         }
     }
 
@@ -520,10 +526,11 @@ impl<'a, T> User<T> where T: Transport<'a> {
         action: PermissionType,
         topic: &Topic,
         mut permission: Permissioned<Identifier>,
-        time: Option<u128> // Intended to use with the header timestamp
-    ) -> Result<(bool, Permissioned<Identifier>)> 
+        time: Option<u128>, // Intended to use with the header timestamp
+    ) -> Result<(bool, Permissioned<Identifier>)>
     where
-        T: Send, {
+        T: Send,
+    {
         if action == PermissionType::Read {
             return Ok((false, permission));
         }
@@ -535,7 +542,7 @@ impl<'a, T> User<T> where T: Transport<'a> {
                 PermissionDuration::Unix(t) => match time {
                     Some(time) => time > (t as u128),
                     None => self.latest_timestamp().await? > (t as u128),
-                }
+                },
                 PermissionDuration::NumBranchMsgs(n) => {
                     let num: u32 = self
                         .state
@@ -567,7 +574,10 @@ impl<'a, T> User<T> where T: Transport<'a> {
     }
 
     pub(crate) async fn latest_timestamp(&self) -> Result<u128> {
-        self.transport().latest_timestamp().await.map_err(|e| Error::PreCheck("time", e.to_string()))
+        self.transport()
+            .latest_timestamp()
+            .await
+            .map_err(|e| Error::PreCheck("time", e.to_string()))
     }
 }
 
@@ -609,27 +619,38 @@ where
             .map_err(Error::Messages)
     }
 
-    pub async fn sync_from(&mut self, selector: &Selector, topic: impl Into<Topic>) -> Result<Messages<T>> {
+    pub async fn sync_from(
+        &mut self,
+        selector: &Selector,
+        topic: impl Into<Topic>,
+    ) -> Result<Messages<T>> {
         let topic = topic.into();
-        let addr = AppAddr::gen(&self.state.author_identifier.as_ref().unwrap(), &self.state.base_branch);
-        let mut latest = Address::new(addr, self.get_latest_link(&topic).ok_or_else(|| {
-            Error::TopicNotFound(topic.clone())
-        })?);
+        let addr = AppAddr::gen(
+            &self.state.author_identifier.as_ref().unwrap(),
+            &self.state.base_branch,
+        );
+        let mut latest = Address::new(
+            addr,
+            self.get_latest_link(&topic)
+                .ok_or_else(|| Error::TopicNotFound(topic.clone()))?,
+        );
 
         let mut msg = self
             .transport
             .recv_message(latest)
             .await
             .map_err(|e| Error::Transport(latest, "receive message", e))?;
-        let mut preparsed: lets::message::PreparsedMessage = msg.parse_header().await
+        let mut preparsed: lets::message::PreparsedMessage = msg
+            .parse_header()
+            .await
             .map_err(|e| Error::Unwrapping("header", latest, e))?;
         let mut header = preparsed.header();
 
         let mut msgs = HashMap::new();
-        
-        // Check if the selector precedes the latest message already, 
+
+        // Check if the selector precedes the latest message already,
         // meaning we need to go forward before retuning any messages.
-        let mut forward = selector.is_from_header(&header, Some(latest)); 
+        let mut forward = selector.is_from_header(&header, Some(latest));
 
         // sync up only if we really need to, to prevent double fetching
         if forward {
@@ -639,8 +660,8 @@ where
                 msgs.insert(m.address().relative(), m.clone());
                 latest = m.address();
                 header = preparsed.header();
-                forward = !selector.is_from_header(&header, Some(latest)); 
-            };
+                forward = !selector.is_from_header(&header, Some(latest));
+            }
         }
 
         while selector.is_from_header(header, Some(latest)) && header.linked_msg_address.is_some() {
@@ -651,10 +672,12 @@ where
                 .recv_message(latest)
                 .await
                 .map_err(|e| Error::Transport(latest, "receive message", e))?;
-            preparsed = msg.parse_header().await
+            preparsed = msg
+                .parse_header()
+                .await
                 .map_err(|e| Error::Unwrapping("header", latest, e))?;
             header = preparsed.header();
-        };
+        }
 
         let start = (topic, header.publisher().clone(), header.sequence);
         let messages_stream = Messages::new_with_cache(self, msgs, Some(start));
@@ -761,23 +784,29 @@ where
         MessageBuilder::new(self)
     }
 
-    pub(crate) async fn send_message(&mut self, address: Address, msg: TransportMessage) -> Result<TSR> {
-            let identity = self.identity_mut().ok_or(Error::NoIdentity("send messages"))?;
-            // TODO: store pubkey in user instance for easy retrieval
-            let sig = identity
-                .sign_data(msg.as_ref())
-                .await
-                .map_err(|e| Error::Transport(address, "send message", e))?;
-            let pub_key = identity
-                .identifier()
-                .sig_pk()
-                .await
-                .map_err(|e| Error::Transport(address, "send message", e))?;
-            self.transport
-                .send_message(address, msg, pub_key, sig)
-                .await
-                .map_err(|e| Error::Transport(address, "send announce message", e))
-       // }
+    pub(crate) async fn send_message(
+        &mut self,
+        address: Address,
+        msg: TransportMessage,
+    ) -> Result<TSR> {
+        let identity = self
+            .identity_mut()
+            .ok_or(Error::NoIdentity("send messages"))?;
+        // TODO: store pubkey in user instance for easy retrieval
+        let sig = identity
+            .sign_data(msg.as_ref())
+            .await
+            .map_err(|e| Error::Transport(address, "send message", e))?;
+        let pub_key = identity
+            .identifier()
+            .sig_pk()
+            .await
+            .map_err(|e| Error::Transport(address, "send message", e))?;
+        self.transport
+            .send_message(address, msg, pub_key, sig)
+            .await
+            .map_err(|e| Error::Transport(address, "send announce message", e))
+        // }
     }
 }
 
@@ -1028,9 +1057,7 @@ impl<T> Eq for User<T> {}
 
 impl<T> User<T> {
     pub fn serialize1(&self) -> Result<String> {
-        serde_json::to_string(&self.state).map_err(|e|{
-            Error::External(e.into())
-        })
+        serde_json::to_string(&self.state).map_err(|e| Error::External(e.into()))
     }
 }
 
@@ -1038,18 +1065,17 @@ impl<T> User<T> {
 mod tests {
     use lets::transport::bucket;
 
-    use crate::{
-        api::user::User,
-        Result,
-    };
+    use crate::{api::user::User, Result};
 
     type Transport = bucket::Client;
 
     #[tokio::test]
-    async fn serialize(
-    ) -> Result<()> {
+    async fn serialize() -> Result<()> {
         let psk = lets::id::Psk::from_seed(b"Psk1");
-        let user = User::builder().with_transport(Transport::new()).with_psk(psk.to_pskid(), psk).build();
+        let user = User::builder()
+            .with_transport(Transport::new())
+            .with_psk(psk.to_pskid(), psk)
+            .build();
 
         let serialized: serde_json::Value = r#"{
             "cursor_store":{},
@@ -1062,13 +1088,16 @@ mod tests {
             "lean":false,
             "topics":[]
         }"#.parse().unwrap();
-        
-        let parsed_user = user.serialize1().unwrap().parse::<serde_json::Value>().unwrap();
+
+        let parsed_user = user
+            .serialize1()
+            .unwrap()
+            .parse::<serde_json::Value>()
+            .unwrap();
 
         // serialize then deserialize so the order doesnt matter
         assert_eq!(serialized, parsed_user);
         assert_eq!(user.state, serde_json::from_value(parsed_user).unwrap());
         Ok(())
     }
-
 }

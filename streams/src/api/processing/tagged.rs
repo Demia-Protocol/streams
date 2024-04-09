@@ -1,6 +1,5 @@
 // Rust
 
-
 // 3rd-party
 
 // IOTA
@@ -10,12 +9,6 @@ use lets::{
     address::{Address, MsgId},
     message::{Message as LetsMessage, PreparsedMessage, Topic, TransportMessage, HDF, PCF},
     transport::Transport,
-};
-
-#[cfg(feature = "did")]
-use lets::id::{
-    did::{StrongholdSecretManager, DID},
-    IdentityKind,
 };
 
 // Local
@@ -66,7 +59,15 @@ where
             .clone();
 
         // Check pre for time-related permissions
-        permission = self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission.clone(),None).await?.1;
+        permission = self
+            .check_and_update_permission(
+                MessageType::TaggedPacket.into(),
+                &topic,
+                permission.clone(),
+                None,
+            )
+            .await?
+            .1;
 
         if permission.is_readonly() {
             return Err(Error::WrongRole(
@@ -124,7 +125,13 @@ where
             .insert_cursor(&topic, permission.clone(), new_cursor);
         self.store_spongos(rel_address, spongos, link_to);
         // Post permission check to remove permisisons if this was the last msg allowed
-        self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission, None).await?;
+        self.check_and_update_permission(
+            MessageType::TaggedPacket.into(),
+            &topic,
+            permission,
+            None,
+        )
+        .await?;
         // Update Branch Links
         self.set_latest_link(topic, rel_address);
 
@@ -132,7 +139,10 @@ where
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> + Send{
+impl<'a, T> User<T>
+where
+    T: Transport<'a> + Send,
+{
     /// Processes a tagged packet message, retrieving the public and masked payloads.
     ///
     /// # Arguments:
@@ -163,13 +173,21 @@ impl<'a, T> User<T> where T: Transport<'a> + Send{
         // From the point of view of cursor tracking, the message exists, regardless of the validity or
         // accessibility to its content. Therefore we must update the cursor of the publisher before
         // handling the message
-        self.state
-            .cursor_store
-            .insert_cursor(&topic, permission.clone(), preparsed.header().sequence());
+        self.state.cursor_store.insert_cursor(
+            &topic,
+            permission.clone(),
+            preparsed.header().sequence(),
+        );
 
         // Check pre for time-related permissions
-        let (changed, permission) =
-            self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission.clone(),  Some(preparsed.header().timestamp as u128)).await?;
+        let (changed, permission) = self
+            .check_and_update_permission(
+                MessageType::TaggedPacket.into(),
+                &topic,
+                permission.clone(),
+                Some(preparsed.header().timestamp as u128),
+            )
+            .await?;
         if changed {
             // lost permission
         }
@@ -197,7 +215,13 @@ impl<'a, T> User<T> where T: Transport<'a> + Send{
         self.store_spongos(address.relative(), spongos, linked_msg_address);
 
         // Post permission check to remove permisisons if this was the last msg allowed
-        self.check_and_update_permission(MessageType::TaggedPacket.into(), &topic, permission, Some(u128::MAX)).await?;
+        self.check_and_update_permission(
+            MessageType::TaggedPacket.into(),
+            &topic,
+            permission,
+            Some(u128::MAX),
+        )
+        .await?;
 
         // Store message content into stores
         self.set_latest_link(topic.clone(), address.relative());

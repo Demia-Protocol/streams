@@ -1,6 +1,5 @@
 // Rust
 
-
 // 3rd-party
 
 // IOTA
@@ -8,15 +7,9 @@
 // Streams
 use lets::{
     address::{Address, MsgId},
-    id::{Permissioned},
+    id::Permissioned,
     message::{Message as LetsMessage, PreparsedMessage, TransportMessage, HDF, PCF},
     transport::Transport,
-};
-
-#[cfg(feature = "did")]
-use lets::id::{
-    did::{StrongholdSecretManager, DID},
-    IdentityKind,
 };
 
 // Local
@@ -98,7 +91,10 @@ where
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> {
+impl<'a, T> User<T>
+where
+    T: Transport<'a>,
+{
     /// Processes a [`User`] unsubscription message, removing the subscriber [`Identifier`] from
     /// store.
     ///

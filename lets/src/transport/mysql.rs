@@ -46,10 +46,8 @@ impl<SM, DM> Client<SM, DM> {
 impl<SM, DM> Client<SM, DM> {
     async fn insert_message(&mut self, sql_msg: SqlMessage) -> Result<()> {
         // TODO: check sql error code to confirm it's just a 23000 (already stored) error
-        let _ = sqlx::query!(
-           r#"INSERT INTO app (app_id) VALUES (?)"#,
-            sql_msg.app_id,
-        ).execute(&self.0)
+        let _ = sqlx::query!(r#"INSERT INTO app (app_id) VALUES (?)"#, sql_msg.app_id,)
+            .execute(&self.0)
             .await;
 
         Ok(sqlx::query!(
@@ -82,27 +80,35 @@ impl<SM, DM> Client<SM, DM> {
             msg_id_bytes,
             app_id_bytes
         )
-            .fetch_one(&self.0)
-            .await
-            .map_err(|e| Error::MySqlClient("fetching message", e))?;
+        .fetch_one(&self.0)
+        .await
+        .map_err(|e| Error::MySqlClient("fetching message", e))?;
 
         if sql_message.signature.len() != 64 {
-            return Err(Error::InvalidSize("signature", 64, sql_message.signature.len() as u64))
+            return Err(Error::InvalidSize(
+                "signature",
+                64,
+                sql_message.signature.len() as u64,
+            ));
         }
 
         if sql_message.public_key.len() != 32 {
-            return Err(Error::InvalidSize("signature", 32, sql_message.public_key.len() as u64))
+            return Err(Error::InvalidSize(
+                "signature",
+                32,
+                sql_message.public_key.len() as u64,
+            ));
         }
 
         let mut bytes = [0u8; 32];
         bytes.clone_from_slice(&sql_message.public_key);
-        let pk = Ed25519Pub::try_from_bytes(bytes)
-            .map_err(|e| Error::Crypto("making public key", e))?;
+        let pk =
+            Ed25519Pub::try_from_bytes(bytes).map_err(|e| Error::Crypto("making public key", e))?;
         let mut bytes = [0u8; 64];
         bytes.clone_from_slice(&sql_message.signature);
         let sig = Ed25519Sig::from_bytes(bytes);
         if !pk.verify(&sig, &sql_message.raw_content) {
-            return Err(Error::Signature("verifying", "retrieve message"))
+            return Err(Error::Signature("verifying", "retrieve message"));
         }
 
         Ok(sql_message)
@@ -155,7 +161,8 @@ where
         let start = std::time::SystemTime::now();
         Ok(start
             .duration_since(std::time::UNIX_EPOCH)
-            .expect("Time went backwards").as_millis())
+            .expect("Time went backwards")
+            .as_millis())
     }
 }
 
@@ -258,7 +265,9 @@ mod tests {
         let msg = TransportMessage::new(body)
             .with_pk(pk.to_bytes().to_vec())
             .with_sig(sig.to_bytes().to_vec());
-        client.send_message(address, msg.clone().into(), pk, sig).await?;
+        client
+            .send_message(address, msg.clone().into(), pk, sig)
+            .await?;
         let response = client.recv_message(address).await?;
         assert_eq!(msg, response);
         Ok(())

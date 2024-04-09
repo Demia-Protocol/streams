@@ -123,7 +123,9 @@ use crate::api::{
 /// suggested that, when suitable, use the methods in [`futures::TryStreamExt`] to make the
 /// error-handling much more ergonomic (with the use of `?`) and shortcircuit the
 /// [`futures::Stream`] on the first error.
-pub struct Messages<'a, T: Send + Sync>(PinBoxFut<'a, (MessagesState<'a, T>, Option<Result<Message>>)>);
+pub struct Messages<'a, T: Send + Sync>(
+    PinBoxFut<'a, (MessagesState<'a, T>, Option<Result<Message>>)>,
+);
 
 type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + 'a + Send>>;
 
@@ -151,7 +153,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             msg_queue,
             stage,
             successful_round,
-            cache
+            cache,
         }
     }
 
@@ -166,16 +168,16 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
         if let Some((relative_address, binary_msg)) = self.stage.pop_front() {
             // Drain stage if not empty...
             let address = Address::new(self.user.stream_address()?.base(), relative_address);
-            
+
             let handled = match self.cache.remove(&relative_address) {
                 Some(msg) => Some(msg),
                 None => {
-                    let msg  = self.user.handle_message(address, binary_msg).await;
+                    let msg = self.user.handle_message(address, binary_msg).await;
                     match msg {
                         Ok(m) => {
                             self.cache.insert(relative_address, m.clone());
                             Some(m)
-                        },
+                        }
                         Err(_) => None,
                     }
                 }
@@ -290,9 +292,20 @@ where
         }))
     }
 
-    pub(crate) fn new_with_cache(user: &'a mut User<T>, cache: HashMap<MsgId, Message>, start: Option<(Topic, Identifier, usize)>) -> Self {
+    pub(crate) fn new_with_cache(
+        user: &'a mut User<T>,
+        cache: HashMap<MsgId, Message>,
+        start: Option<(Topic, Identifier, usize)>,
+    ) -> Self {
         let start = start.into_iter().collect();
-        let mut state = MessagesState::new(user, start, Default::default(), Default::default(), Default::default(), cache);
+        let mut state = MessagesState::new(
+            user,
+            start,
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            cache,
+        );
         Self(Box::pin(async move {
             let r = state.next().await;
             (state, r)
@@ -418,8 +431,7 @@ mod tests {
     type Transport = bucket::Client;
 
     #[tokio::test]
-    async fn messages_fetch_backwards(
-    ) -> Result<()> {
+    async fn messages_fetch_backwards() -> Result<()> {
         let (mut author, mut subscriber1, _, _) = author_subscriber_fixture().await?;
 
         let branch_1 = "BRANCH_1";
@@ -435,7 +447,9 @@ mod tests {
         for i in 0..3 {
             std::thread::sleep(core::time::Duration::from_secs(1));
             let p = format!("payload{}", i);
-            author.send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes()).await?;
+            author
+                .send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes())
+                .await?;
         }
 
         // last timestamp subscriber1 is interested in
@@ -443,14 +457,16 @@ mod tests {
             .duration_since(std::time::SystemTime::UNIX_EPOCH)
             .expect("Failed to get system time")
             .as_secs() as u64;
-    
+
         subscriber1.sync().await?;
         let backup = subscriber1.backup("messages_fetch_backwards").await?;
 
         for i in 3..6 {
             std::thread::sleep(core::time::Duration::from_secs(1));
             let p = format!("payload{}", i);
-            let _packet = author.send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes()).await?;
+            let _packet = author
+                .send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes())
+                .await?;
         }
 
         subscriber1.sync().await?;
@@ -459,12 +475,19 @@ mod tests {
         // last 3
         {
             println!("== last 3 - backup at 3");
-            subscriber1 = User::restore(backup.clone(), "messages_fetch_backwards", author.transport().clone()).await?;
+            subscriber1 = User::restore(
+                backup.clone(),
+                "messages_fetch_backwards",
+                author.transport().clone(),
+            )
+            .await?;
             // Read back until we find the time we care about
-            let mut messages = subscriber1.sync_from(&Selector::Time(timestamp_3.into()), branch_1).await?;
+            let mut messages = subscriber1
+                .sync_from(&Selector::Time(timestamp_3.into()), branch_1)
+                .await?;
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
-                let p = format!("payload{}", amount+3);
+                let p = format!("payload{}", amount + 3);
                 assert!(msg.header().timestamp as u64 > timestamp_3);
                 assert_eq!(p.as_bytes(), msg.as_signed_packet().unwrap().masked_payload);
                 amount += 1;
@@ -475,9 +498,16 @@ mod tests {
         // all messages
         {
             println!("== last 6 - backup at 3");
-            subscriber1 = User::restore(backup, "messages_fetch_backwards", author.transport().clone()).await?;
+            subscriber1 = User::restore(
+                backup,
+                "messages_fetch_backwards",
+                author.transport().clone(),
+            )
+            .await?;
             // Read back until we find the time we care about
-            let mut messages = subscriber1.sync_from(&Selector::Time(timestamp_6.into()), branch_1).await?;
+            let mut messages = subscriber1
+                .sync_from(&Selector::Time(timestamp_6.into()), branch_1)
+                .await?;
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
                 let p = format!("payload{}", amount);
@@ -491,13 +521,20 @@ mod tests {
         // last 3
         {
             println!("== last 3 - backup at 6");
-            subscriber1 = User::restore(backup_all.clone(), "messages_fetch_backwards", author.transport().clone()).await?;
+            subscriber1 = User::restore(
+                backup_all.clone(),
+                "messages_fetch_backwards",
+                author.transport().clone(),
+            )
+            .await?;
             // Read back until we find the time we care about
-            let mut messages = subscriber1.sync_from(&Selector::Time(timestamp_3.into()), branch_1).await?;
+            let mut messages = subscriber1
+                .sync_from(&Selector::Time(timestamp_3.into()), branch_1)
+                .await?;
 
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
-                let p = format!("payload{}", amount+3);
+                let p = format!("payload{}", amount + 3);
                 assert!(msg.header().timestamp as u64 > timestamp_3);
                 assert_eq!(p.as_bytes(), msg.as_signed_packet().unwrap().masked_payload);
                 amount += 1;
@@ -508,9 +545,16 @@ mod tests {
         // all messages
         {
             println!("== last 6 - backup at 6");
-            subscriber1 = User::restore(backup_all, "messages_fetch_backwards", author.transport().clone()).await?;
+            subscriber1 = User::restore(
+                backup_all,
+                "messages_fetch_backwards",
+                author.transport().clone(),
+            )
+            .await?;
             // Read back until we find the time we care about
-            let mut messages = subscriber1.sync_from(&Selector::Time(timestamp_6.into()), branch_1).await?;
+            let mut messages = subscriber1
+                .sync_from(&Selector::Time(timestamp_6.into()), branch_1)
+                .await?;
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
                 let p = format!("payload{}", amount);
@@ -522,7 +566,6 @@ mod tests {
         }
 
         Ok(())
-
     }
 
     #[tokio::test]

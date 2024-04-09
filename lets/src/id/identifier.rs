@@ -1,7 +1,7 @@
 // Rust
+use alloc::boxed::Box;
 #[cfg(feature = "did")]
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 #[cfg(feature = "did")]
 use anyhow::anyhow;
 #[cfg(feature = "did")]
@@ -161,7 +161,7 @@ impl Default for Identifier {
     fn default() -> Self {
         #[cfg(not(feature = "did"))]
         {
-            let default_public_key = 
+            let default_public_key =
                 ed25519::PublicKey::try_from_bytes([0; ed25519::PublicKey::LENGTH]).unwrap();
             Identifier::from(default_public_key)
         }
@@ -411,10 +411,9 @@ where
                             Location::generic(STREAMS_VAULT, sender_method.id().to_string());
                         // Get public key for encryption
                         let xkey = iota_client::crypto::keys::x25519::PublicKey::try_from_slice(
-                            &receiver_method
-                                .data()
-                                .try_decode()
-                                .map_err(|e| SpongosError::Context("ContentEncrypt try_decode", e.to_string()))?,
+                            &receiver_method.data().try_decode().map_err(|e| {
+                                SpongosError::Context("ContentEncrypt try_decode", e.to_string())
+                            })?,
                         )
                         .map_err(|e| {
                             SpongosError::Context(

@@ -25,7 +25,8 @@ pub struct Ed25519(ed25519::SecretKey);
 impl serde::Serialize for Ed25519 {
     fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         // TODO: We probably dont want to serialize this
         todo!()
     }
@@ -35,7 +36,8 @@ impl serde::Serialize for Ed25519 {
 impl<'de> serde::Deserialize<'de> for Ed25519 {
     fn deserialize<D>(_: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de> {
+        D: serde::Deserializer<'de>,
+    {
         todo!()
     }
 }

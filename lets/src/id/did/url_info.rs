@@ -1,5 +1,5 @@
 // Rust
-use alloc::{string::{self, String}, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use core::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
@@ -38,7 +38,10 @@ pub struct DIDUrlInfo {
     /// Fragment label for signature key method
     signing_fragment: String,
     /// Stronghold Adapter
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none", skip))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none", skip)
+    )]
     stronghold: Option<StrongholdSecretManager>,
 }
 

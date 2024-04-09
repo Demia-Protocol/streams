@@ -109,7 +109,8 @@ where
         let start = std::time::SystemTime::now();
         Ok(start
             .duration_since(std::time::UNIX_EPOCH)
-            .expect("Time went backwards").as_millis())
+            .expect("Time went backwards")
+            .as_millis())
     }
 }
 

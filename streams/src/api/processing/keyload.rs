@@ -14,12 +14,6 @@ use lets::{
     transport::Transport,
 };
 
-#[cfg(feature = "did")]
-use lets::id::{
-    did::{StrongholdSecretManager, DID},
-    IdentityKind,
-};
-
 // Local
 use crate::{
     api::{message::Message, send_response::SendResponse, user::INIT_MESSAGE_NUM},
@@ -235,7 +229,10 @@ where
     }
 }
 
-impl<'a, T> User<T> where T: Transport<'a> {
+impl<'a, T> User<T>
+where
+    T: Transport<'a>,
+{
     /// Processes a keyload message, updating store to include the contained list of
     /// [permissions](`Permissioned`). All keyload messages are linked to the announcement
     /// message to ensure they can always be read by a [`User`] that can sequence up to it.
@@ -333,7 +330,7 @@ impl<'a, T> User<T> where T: Transport<'a> {
         }
 
         // Have to make message before setting branch links due to immutable borrow in keyload::unwrap
-        let final_message = Message::from_lets_message(address, pk, sig,raw, message);
+        let final_message = Message::from_lets_message(address, pk, sig, raw, message);
 
         // Store message content into stores
         for subscriber in subscribers {

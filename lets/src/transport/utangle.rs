@@ -246,17 +246,17 @@ struct Tips {
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Status {
+pub struct Status {
     /// Latest seen milestone
-    latest_milestone: Milestone,
-    confirmed_milestone: Milestone,
+    pub latest_milestone: Milestone,
+    pub confirmed_milestone: Milestone,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Milestone {
-    index: u32,
-    timestamp: u64
+pub struct Milestone {
+    pub index: u32,
+    pub timestamp: u64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -329,11 +329,9 @@ pub struct SentMessageResponse {
 impl TryFrom<Block> for TransportMessage {
     type Error = crate::error::Error;
     fn try_from(message: Block) -> Result<Self> {
-        Ok(
-            Self::new(prefix_hex::decode(message.payload.data.clone())?)
-                .with_pk(prefix_hex::decode(message.payload.pub_key)?)
-                .with_sig(prefix_hex::decode(message.payload.signature)?)
-        )
+        Ok(Self::new(prefix_hex::decode(message.payload.data.clone())?)
+            .with_pk(prefix_hex::decode(message.payload.pub_key)?)
+            .with_sig(prefix_hex::decode(message.payload.signature)?))
     }
 }
 
