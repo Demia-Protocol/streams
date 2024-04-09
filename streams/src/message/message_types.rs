@@ -38,8 +38,24 @@ impl From<MessageType> for PermissionType {
     fn from(val: MessageType) -> Self {
         match val {
             MessageType::SignedPacket | MessageType::TaggedPacket => PermissionType::ReadWrite,
-            MessageType::Announcement | MessageType::BranchAnnouncement | MessageType::Keyload => PermissionType::Admin,
+            MessageType::Announcement | MessageType::BranchAnnouncement | MessageType::Keyload => {
+                PermissionType::Admin
+            }
             _ => PermissionType::Read,
+        }
+    }
+}
+
+impl From<MessageType> for u8 {
+    fn from(value: MessageType) -> Self {
+        match value {
+            MessageType::Announcement => ANNOUNCEMENT,
+            MessageType::BranchAnnouncement => BRANCH_ANNOUNCEMENT,
+            MessageType::Keyload => KEYLOAD,
+            MessageType::SignedPacket => SIGNED_PACKET,
+            MessageType::TaggedPacket => TAGGED_PACKET,
+            MessageType::Subscription => SUBSCRIPTION,
+            MessageType::Unsubscription => UNSUBSCRIPTION,
         }
     }
 }
@@ -67,14 +83,20 @@ mod tests {
 
     #[test]
     fn test_try_from() {
-        assert_eq!(MessageType::try_from(0), Some(MessageType::Announcement));
-        assert_eq!(MessageType::try_from(3), Some(MessageType::SignedPacket));
-        assert_eq!(MessageType::try_from(7), None);
+        assert!(matches!(
+            MessageType::try_from(0),
+            Ok(MessageType::Announcement)
+        ));
+        assert!(matches!(
+            MessageType::try_from(3),
+            Ok(MessageType::SignedPacket)
+        ));
+        assert!(matches!(MessageType::try_from(7), Err(_)));
     }
 
     #[test]
     fn test_into() {
-        assert_eq!(MessageType::Announcement.into(), 0);
-        assert_eq!(MessageType::TaggedPacket.into(), 4);
+        assert_eq!(0_u8, u8::from(MessageType::Announcement));
+        assert_eq!(4_u8, u8::from(MessageType::TaggedPacket));
     }
 }

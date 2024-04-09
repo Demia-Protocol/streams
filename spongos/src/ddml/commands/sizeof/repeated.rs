@@ -13,8 +13,6 @@ where
     C: for<'a> FnMut(&'a mut Self, I::Item) -> Result<&'a mut Self>,
 {
     fn repeated(&mut self, mut values_iter: I, mut value_handle: C) -> Result<&mut Self> {
-        values_iter.try_fold(self, |ctx, item| {
-            value_handle(ctx, item)
-        })
+        values_iter.try_fold(self, |ctx, item| value_handle(ctx, item))
     }
 }

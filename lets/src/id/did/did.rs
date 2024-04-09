@@ -51,7 +51,8 @@ pub(crate) async fn get_exchange_method(info: &DIDUrlInfo) -> SpongosResult<Veri
         .ok_or(SpongosError::Context(
             "ContentEncrypt",
             "failed to resolve method".to_string(),
-        )).cloned()
+        ))
+        .cloned()
 }
 
 // TODO: Remove redundant layerings now that accounts don't exist

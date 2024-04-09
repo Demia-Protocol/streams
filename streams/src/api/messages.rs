@@ -142,17 +142,14 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
     fn new(
         user: &'a mut User<T>,
         ids_stack: Vec<(Topic, Identifier, usize)>,
-        msg_queue: HashMap<MsgId, VecDeque<(MsgId, TransportMessage)>>,
-        stage: VecDeque<(MsgId, TransportMessage)>,
-        successful_round: bool,
         cache: HashMap<MsgId, Message>,
     ) -> Self {
         Self {
             user,
             ids_stack,
-            msg_queue,
-            stage,
-            successful_round,
+            msg_queue: Default::default(),
+            stage: Default::default(),
+            successful_round: Default::default(),
             cache,
         }
     }
@@ -298,14 +295,7 @@ where
         start: Option<(Topic, Identifier, usize)>,
     ) -> Self {
         let start = start.into_iter().collect();
-        let mut state = MessagesState::new(
-            user,
-            start,
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            cache,
-        );
+        let mut state = MessagesState::new(user, start, cache);
         Self(Box::pin(async move {
             let r = state.next().await;
             (state, r)

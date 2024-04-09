@@ -6,6 +6,7 @@ use alloc::{
     vec::Vec,
 };
 use core::fmt::{Debug, Formatter, Result as FormatResult};
+use serde::Serialize;
 
 // 3rd-party
 use async_trait::async_trait;
@@ -520,6 +521,7 @@ where
         }
     }
 
+    // TODO: Re-evaluate the way we process permissions twice per message
     pub(crate) async fn check_and_update_permission(
         &mut self,
         action: PermissionType,
@@ -1021,22 +1023,23 @@ impl<T> Debug for User<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FormatResult {
         write!(
             f,
-            "\n* identifier: <{:?}>\n* topic: {}\n{:?}\n* PSKs: \n",
+            "\n* identifier: <{:?}>\n* topic: {}\n{:?}\n",
             self.identifier(),
             self.base_branch(),
             self.state.cursor_store,
         )?;
-    
+
+        writeln!(f, "* PSKs:")?;
         for pskid in self.state.psk_store.keys() {
             writeln!(f, "\t<{:?}>", pskid)?;
         }
-    
+
         writeln!(f, "* messages:")?;
-    
+
         for key in self.state.spongos_store.keys() {
             writeln!(f, "\t<{}>", key)?;
         }
-    
+
         write!(f, "* lean: {}", self.state.lean)
     }
 }
@@ -1055,9 +1058,12 @@ impl<T> PartialEq for User<T> {
 /// considered equal
 impl<T> Eq for User<T> {}
 
-impl<T> User<T> {
-    pub fn serialize1(&self) -> Result<String> {
-        serde_json::to_string(&self.state).map_err(|e| Error::External(e.into()))
+impl<T: Serialize> Serialize for User<T> {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.state.serialize(serializer)
     }
 }
 
@@ -1089,8 +1095,7 @@ mod tests {
             "topics":[]
         }"#.parse().unwrap();
 
-        let parsed_user = user
-            .serialize1()
+        let parsed_user = serde_json::to_string(&user)
             .unwrap()
             .parse::<serde_json::Value>()
             .unwrap();
