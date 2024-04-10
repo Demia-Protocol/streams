@@ -1,6 +1,7 @@
 //! Stream Errors
 
 // Rust
+use alloc::string::String;
 use core::{array::TryFromSliceError, fmt::Debug};
 
 // 3rd-party
@@ -67,6 +68,9 @@ Any {0} message must be linked to a previous message by including the address of
 
     #[error("Setup error: {0}")]
     Setup(&'static str),
+
+    #[error("Failed to check send precondition {0} due to: {1}")]
+    PreCheck(&'static str, String),
 
     #[error("Topic {0} already exists")]
     DuplicateTopic(Topic),

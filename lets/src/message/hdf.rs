@@ -125,7 +125,11 @@ impl HDF {
                 self.payload_length = payload_length;
                 Ok(self)
             }
-            false => Err(Error::InvalidSize("payload_length", 10, payload_length.into())),
+            false => Err(Error::InvalidSize(
+                "payload_length",
+                10,
+                payload_length.into(),
+            )),
         }
     }
 
@@ -281,8 +285,8 @@ where
         hdf.encoding = encoding.inner();
         hdf.version = version.inner();
         hdf.message_type = message_type_and_payload_length[0] >> 4;
-        hdf.payload_length =
-            (((message_type_and_payload_length[0] & 0b0011) as u16) << 8) | (message_type_and_payload_length[1] as u16);
+        hdf.payload_length = (((message_type_and_payload_length[0] & 0b0011) as u16) << 8)
+            | (message_type_and_payload_length[1] as u16);
         hdf.frame_type = frame_type.inner();
 
         let mut x = [0u8; 4];

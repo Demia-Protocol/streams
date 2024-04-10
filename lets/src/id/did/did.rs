@@ -52,12 +52,13 @@ pub(crate) async fn get_exchange_method(info: &DIDUrlInfo) -> SpongosResult<Veri
             "ContentEncrypt",
             "failed to resolve method".to_string(),
         ))
-        .map(|method| method.clone())
+        .cloned()
 }
 
 // TODO: Remove redundant layerings now that accounts don't exist
 /// Type of `DID` implementation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DID {
     /// Private Key based [`DIDInfo`], manually specifying key pairs
     PrivateKey(DIDInfo),
@@ -117,6 +118,7 @@ where
 
 /// Details of a `DID` implementation
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DIDInfo {
     /// Document retrieval information
     url_info: DIDUrlInfo,
@@ -163,7 +165,8 @@ impl PartialOrd for KeyPair {
 
 impl Ord for KeyPair {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        (self.0.type_(), self.0.private().as_ref()).cmp(&(other.0.type_(), other.0.private().as_ref()))
+        (self.0.type_(), self.0.private().as_ref())
+            .cmp(&(other.0.type_(), other.0.private().as_ref()))
     }
 }
 

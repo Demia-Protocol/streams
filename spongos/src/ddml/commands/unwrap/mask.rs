@@ -120,7 +120,7 @@ impl<'a, F: PRP, IS: io::IStream> Mask<&'a mut x25519::PublicKey> for Context<IS
 /// Decrypts an Ed25519 public key from [`Context`].
 impl<'a, F: PRP, IS: io::IStream> Mask<&'a mut ed25519::PublicKey> for Context<IS, F> {
     fn mask(&mut self, public_key: &'a mut ed25519::PublicKey) -> Result<&mut Self> {
-        let mut bytes = [0u8; ed25519::PUBLIC_KEY_LENGTH];
+        let mut bytes = [0u8; ed25519::PublicKey::LENGTH];
         MaskContext::new(self).unwrapn(&mut bytes)?;
         match ed25519::PublicKey::try_from_bytes(bytes) {
             Ok(pk) => {

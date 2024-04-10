@@ -14,7 +14,7 @@ readme = "README.md"
 version = "0.2.0"
 
 [features]
-default = ["osrng"]
+default = ["osrng", "serde"]
 # std is needed within spongos to enable the Dump DDML command
 std = []
 # rand and particularly its getrandom feature are necessary for the X25519 wrapping command. 
@@ -23,10 +23,11 @@ std = []
 # if X25519 wrapping is needed (see https://docs.rs/getrandom/latest/getrandom/#custom-implementations). 
 # X25519 unwrapping command does *not* need the "rand" feature nor `getrandom` support
 osrng = ["rand/std_rng", "rand/getrandom", "iota-crypto/rand"]
+serde = ["dep:serde"]
 
 [dependencies]
 # IOTA Dependencies
-iota-crypto = {version = "0.15.3", default-features = false, features = ["ed25519", "x25519"]}
+iota-crypto = {version = "0.23.1", default-features = false, features = ["x25519", "ed25519", "sha", "blake2b", "aes-gcm", "cipher", "serde"]}
 
 # 3rd-party dependencies 
 digest = {version = "0.9", default-features = false}
@@ -37,6 +38,7 @@ rand = {version = "0.8", default-features = false}
 
 # Error
 thiserror-no-std = {version = "2.0.2", default-features = false}
+serde = { version = "1", default-features = false, optional = true }
 
 # quarentine
 # anyhow is forcing spongos (and anything depending on it) to pull in libstd

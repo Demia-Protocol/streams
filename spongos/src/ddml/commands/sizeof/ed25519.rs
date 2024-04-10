@@ -11,8 +11,12 @@ use crate::{
 
 /// Increases [`Context`] size by Ed25519 Signature Length (64 Bytes)
 impl Ed25519<&ed25519::SecretKey, External<&NBytes<[u8; 64]>>> for Context {
-    fn ed25519(&mut self, _sk: &ed25519::SecretKey, _hash: External<&NBytes<[u8; 64]>>) -> Result<&mut Self> {
-        self.size += ed25519::SIGNATURE_LENGTH;
+    fn ed25519(
+        &mut self,
+        _sk: &ed25519::SecretKey,
+        _hash: External<&NBytes<[u8; 64]>>,
+    ) -> Result<&mut Self> {
+        self.size += ed25519::SecretKey::LENGTH;
         Ok(self)
     }
 }

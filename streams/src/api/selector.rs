@@ -4,7 +4,11 @@ use core::{fmt::Formatter, ops::Range};
 // IOTA
 
 // Streams
-use lets::{address::Address, id::Identifier, message::TopicHash};
+use lets::{
+    address::Address,
+    id::Identifier,
+    message::{TopicHash, HDF},
+};
 
 use crate::Message;
 
@@ -15,6 +19,7 @@ pub enum Selector {
     Topic(TopicHash),
     Identifier(Identifier),
     Level(Range<usize>),
+    Time(u128),
 }
 
 impl Selector {
@@ -33,11 +38,22 @@ impl Selector {
     ///
     /// A boolean value.
     pub fn is(&self, message: &Message) -> bool {
+        self.is_from_header(message.header(), Some(message.address))
+    }
+
+    pub fn is_from_header(&self, header: &HDF, address: Option<Address>) -> bool {
         match self {
-            Selector::Address(address) => &message.address == address,
-            Selector::Topic(topic) => message.header().topic_hash() == topic,
-            Selector::Identifier(identifier) => message.header().publisher() == identifier,
-            Selector::Level(range) => range.contains(&message.header().sequence()),
+            Selector::Address(a) => {
+                if let Some(address) = address {
+                    &address == a
+                } else {
+                    false
+                }
+            }
+            Selector::Topic(topic) => header.topic_hash() == topic,
+            Selector::Identifier(identifier) => header.publisher() == identifier,
+            Selector::Level(range) => range.contains(&header.sequence()),
+            Selector::Time(stamp) => header.timestamp as u128 > *stamp,
         }
     }
 }

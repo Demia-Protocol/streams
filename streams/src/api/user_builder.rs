@@ -138,7 +138,7 @@ impl<T> UserBuilder<T> {
     pub fn build<Trans>(self) -> User<Trans>
     where
         T: IntoTransport<Trans>,
-        Trans: for<'a> Transport<'a> + Send,
+        Trans: for<'a> Transport<'a> + Send + Sync,
     {
         User::new(self.id, self.psks, self.transport.into(), self.lean)
     }
@@ -192,7 +192,7 @@ impl<T> UserBuilder<T> {
     pub async fn recover<Trans>(self, announcement: Address) -> Result<User<Trans>>
     where
         T: IntoTransport<Trans>,
-        Trans: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+        Trans: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync,
     {
         let mut user = self.build();
         user.receive_message(announcement).await?;

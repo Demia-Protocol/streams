@@ -81,7 +81,9 @@ where
     let mut tag_wrap = [0; 32];
     let mut tag_unwrap = [0; 32];
 
-    let ns = [0, 1, 13, 14, 25, 26, 27, 39, 40, 81, 9840, 9841, 9842, 19683];
+    let ns = [
+        0, 1, 13, 14, 25, 26, 27, 39, 40, 81, 9840, 9841, 9842, 19683,
+    ];
 
     for n in ns.iter() {
         let s = Size::new(*n);
@@ -229,7 +231,7 @@ fn bytes() {
 }
 
 fn absorb_ed25519<F: PRP + Default>() -> Result<()> {
-    let secret = ed25519::SecretKey::from_bytes([7; ed25519::SECRET_KEY_LENGTH]);
+    let secret = ed25519::SecretKey::from_bytes(&[7; ed25519::SecretKey::LENGTH]);
 
     let tag_wrap = Bytes::new(vec![3u8; 17]);
     let mut tag_unwrap = Bytes::default();

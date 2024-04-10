@@ -12,7 +12,8 @@ use crate::{
 /// Squeeze [`Context`] into a [`Mac`] length hash, using allocated space in context byte stream.
 impl<'a, F: PRP, OS: io::OStream> Squeeze<&'a Mac> for Context<OS, F> {
     fn squeeze(&mut self, mac: &'a Mac) -> Result<&mut Self> {
-        self.spongos.squeeze_mut(&mut self.stream.try_advance(mac.length())?);
+        self.spongos
+            .squeeze_mut(&mut self.stream.try_advance(mac.length())?);
         Ok(self)
     }
 }

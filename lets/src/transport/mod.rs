@@ -56,6 +56,8 @@ pub trait Transport<'a> {
             Err(Error::AddressError("not found in transport", address))
         }
     }
+
+    async fn latest_timestamp(&self) -> Result<u128>;
 }
 
 /// Localised mapping for tests and simulations

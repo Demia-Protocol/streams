@@ -22,9 +22,8 @@ use iota_client::{
 // Streams
 use streams::{
     id::{
-        Ed25519,
         did::{DIDInfo, DIDUrlInfo, Location, StrongholdSecretManager, DID, STREAMS_VAULT},
-        Permissioned, Psk,
+        Ed25519, Permissioned, Psk,
     },
     Result, User,
 };
@@ -51,10 +50,23 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result
         .map_err(|e| anyhow!(e.to_string()))?;
 
     println!("> Making DID with method for the Author");
-    let author_did_info = make_did_info(&did_client, "auth_key", "auth_xkey", "auth_signing_key", "auth").await?;
+    let author_did_info = make_did_info(
+        &did_client,
+        "auth_key",
+        "auth_xkey",
+        "auth_signing_key",
+        "auth",
+    )
+    .await?;
     println!("> Making another DID with methods for one of the Subscribers");
-    let subscriber_a_did_info =
-        make_did_info(&did_client, "sub_a_key", "sub_a_xkey", "subA_signing_key", "subA").await?;
+    let subscriber_a_did_info = make_did_info(
+        &did_client,
+        "sub_a_key",
+        "sub_a_xkey",
+        "subA_signing_key",
+        "subA",
+    )
+    .await?;
     //let subscriber_b_did_info =
     //    make_did_info(&did_client, "sub_b_key", "sub_b_xkey", "subB_signing_key", "subB").await?;
 
@@ -104,8 +116,12 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result
     print_user("Subscriber A", &subscriber_b);
 
     println!("> Author reads subscription of subscribers A and B");
-    let _subscription_a_as_author = author.receive_message(subscription_a_as_a.address()).await?;
-    let subscription_b_as_author = author.receive_message(subscription_b_as_b.address()).await?;
+    let _subscription_a_as_author = author
+        .receive_message(subscription_a_as_a.address())
+        .await?;
+    let subscription_b_as_author = author
+        .receive_message(subscription_b_as_b.address())
+        .await?;
     print_user("Author", &author);
 
     println!("> Author creates new branch");
@@ -161,7 +177,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result
     print_user("Subscriber C", &subscriber_c);
     for message in &messages_as_c {
         println!("\t{}", message.address());
-        println!("{}", indent(&fill(&format!("{:?}", message.content()), 140), "\t| "));
+        println!(
+            "{}",
+            indent(&fill(&format!("{:?}", message.content()), 140), "\t| ")
+        );
         println!("\t---");
     }
     assert_eq!(9, messages_as_c.len());
@@ -171,7 +190,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result
     print_user("Subscriber B", &subscriber_b);
     for message in &messages_as_b {
         println!("\t{}", message.address());
-        println!("{}", indent(&fill(&format!("{:?}", message.content()), 140), "\t| "));
+        println!(
+            "{}",
+            indent(&fill(&format!("{:?}", message.content()), 140), "\t| ")
+        );
         println!("\t---");
     }
     assert_eq!(9, messages_as_b.len());
@@ -181,7 +203,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result
     print_user("Subscriber A", &subscriber_a);
     for message in &messages_as_a {
         println!("\t{}", message.address());
-        println!("{}", indent(&fill(&format!("{:?}", message.content()), 140), "\t| "));
+        println!(
+            "{}",
+            indent(&fill(&format!("{:?}", message.content()), 140), "\t| ")
+        );
         println!("\t---");
     }
     assert_eq!(6, messages_as_a.len());
@@ -201,8 +226,9 @@ async fn make_did_info(
 
     // Create a signing key for Identity and store the mnemonic key
     let doc_keypair = KeyPair::new(KeyType::Ed25519)?;
-    let mnemonic = bip39::wordlist::encode(doc_keypair.private().as_ref(), &bip39::wordlist::ENGLISH)
-        .map_err(|err| anyhow!(format!("{err:?}")))?;
+    let mnemonic =
+        bip39::wordlist::encode(doc_keypair.private().as_ref(), &bip39::wordlist::ENGLISH)
+            .map_err(|err| anyhow!(format!("{err:?}")))?;
     adapter
         .store_mnemonic(mnemonic)
         .await
@@ -229,7 +255,14 @@ async fn make_did_info(
     assert!(total_amount > 0, "not enough balance for identity");
 
     // Create the root document, publish it and test resolving it
-    let doc = new_doc(did_client, &mut stronghold, &doc_keypair, doc_signing_fragment, address).await?;
+    let doc = new_doc(
+        did_client,
+        &mut stronghold,
+        &doc_keypair,
+        doc_signing_fragment,
+        address,
+    )
+    .await?;
     let mut doc = did_client
         .resolve_did(doc.id())
         .await
@@ -256,12 +289,19 @@ async fn make_did_info(
         .finish(did_client.get_token_supply().await?)?;
 
     // Publish the updated Alias Output.
-    let updated = did_client.publish_did_output(&stronghold, alias_output).await?;
+    let updated = did_client
+        .publish_did_output(&stronghold, alias_output)
+        .await?;
 
     // Create a new DIDInfo object with the stronghold included
     match stronghold {
         SecretManager::Stronghold(stronghold) => {
-            let mut url_info = DIDUrlInfo::new(updated.id().clone(), CLIENT_URL, exchange_fragment, signing_fragment);
+            let mut url_info = DIDUrlInfo::new(
+                updated.id().clone(),
+                CLIENT_URL,
+                exchange_fragment,
+                signing_fragment,
+            );
             url_info = url_info.with_stronghold(stronghold);
             Ok(DIDInfo::new(url_info))
         }
@@ -278,9 +318,16 @@ fn stronghold_adapter(ext: &str) -> Result<StrongholdSecretManager> {
 }
 
 // Request the funds for the Identity to be stored with
-async fn request_faucet_funds(did_client: &DIDClient, stronghold: &mut SecretManager) -> anyhow::Result<Address> {
+async fn request_faucet_funds(
+    did_client: &DIDClient,
+    stronghold: &mut SecretManager,
+) -> anyhow::Result<Address> {
     // Fetch addresseses from the stronghold adapter for faucet funds
-    let addresses = did_client.get_addresses(stronghold).with_range(0..1).get_raw().await?;
+    let addresses = did_client
+        .get_addresses(stronghold)
+        .with_range(0..1)
+        .get_raw()
+        .await?;
     let b32_address = addresses[0].to_bech32(did_client.get_bech32_hrp().await?);
     println!("Requesting funds for {}", b32_address);
     iota_client::request_funds_from_faucet(FAUCET, &b32_address).await?;
@@ -354,12 +401,17 @@ async fn generate_streams_keys(
                 exchange_fragment,
             )?;
 
-            let signing_key_location = Location::generic(STREAMS_VAULT, signing_method.id().to_string());
-            let exchange_key_location = Location::generic(STREAMS_VAULT, exchange_method.id().to_string());
+            let signing_key_location =
+                Location::generic(STREAMS_VAULT, signing_method.id().to_string());
+            let exchange_key_location =
+                Location::generic(STREAMS_VAULT, exchange_method.id().to_string());
 
             // Store new methods in vault
             vault.write_secret(signing_key_location, signing_kp.private().as_ref().to_vec())?;
-            vault.write_secret(exchange_key_location, exchange_kp.private().as_ref().to_vec())?;
+            vault.write_secret(
+                exchange_key_location,
+                exchange_kp.private().as_ref().to_vec(),
+            )?;
 
             // Insert methods into document
             doc.insert_method(signing_method, MethodScope::VerificationMethod)?;

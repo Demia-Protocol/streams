@@ -35,7 +35,10 @@ impl<'a, F: PRP, OS: io::OStream> Wrap for AbsorbContext<'a, F, OS> {
     {
         let bytes = bytes.as_ref();
         self.ctx.spongos.absorb(bytes);
-        self.ctx.stream.try_advance(bytes.len())?.copy_from_slice(bytes);
+        self.ctx
+            .stream
+            .try_advance(bytes.len())?
+            .copy_from_slice(bytes);
         Ok(self)
     }
 }

@@ -28,7 +28,10 @@ use async_trait::async_trait;
 // Streams
 use lets::{
     id::{Identifier, Identity},
-    message::{ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap, Topic},
+    message::{
+        ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
+        Topic,
+    },
 };
 use spongos::{
     ddml::{
@@ -58,7 +61,11 @@ impl<'a> Wrap<'a> {
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
     /// * `user_id`: The [`Identity`] of the publisher
     /// * `new_topic`: the new branch [`Topic`]
-    pub(crate) fn new(initial_state: &'a mut Spongos, user_id: &'a mut Identity, new_topic: &'a Topic) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        user_id: &'a mut Identity,
+        new_topic: &'a Topic,
+    ) -> Self {
         Self {
             initial_state,
             user_id,

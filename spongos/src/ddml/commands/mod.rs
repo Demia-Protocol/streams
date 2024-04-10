@@ -68,7 +68,11 @@ pub trait Ed25519<Key, Hash> {
 
 /// X25519 command. Absorb Diffie-Hellman shared key.
 pub trait X25519<ExchangeKey, EncryptionKey> {
-    fn x25519(&mut self, exchange_key: ExchangeKey, encryption_key: EncryptionKey) -> Result<&mut Self>;
+    fn x25519(
+        &mut self,
+        exchange_key: ExchangeKey,
+        encryption_key: EncryptionKey,
+    ) -> Result<&mut Self>;
 }
 
 /// Fork command. Fork Spongos state and continue processing `Context` commands.
@@ -107,7 +111,7 @@ pub trait Guard {
 /// Dump context info into stdout.
 /// Use it like this: `ctx.dump(format_args!("checkpoint"))`
 pub trait Dump {
-    fn dump<'a>(&mut self, args: core::fmt::Arguments<'a>) -> Result<&mut Self>;
+    fn dump(&mut self, args: core::fmt::Arguments) -> Result<&mut Self>;
 }
 
 /// Implementation of command traits for message size calculation.

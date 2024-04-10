@@ -51,7 +51,7 @@ impl<F: PRP, IS> Absorb<External<Uint64>> for Context<IS, F> {
 impl<F: PRP, IS> Absorb<External<Size>> for Context<IS, F> {
     fn absorb(&mut self, size: External<Size>) -> Result<&mut Self> {
         size.into_inner().encode(|byte| {
-            self.spongos.absorb(&[byte]);
+            self.spongos.absorb([byte]);
             Ok(())
         })?;
         Ok(self)

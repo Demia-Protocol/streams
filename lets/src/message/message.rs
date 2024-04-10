@@ -86,7 +86,11 @@ impl<Payload> Message<Payload> {
         sizeof::Context: ContentSizeof<HDF> + ContentSizeof<PCF<Payload>>,
     {
         let mut ctx = sizeof::Context::new();
-        ctx.sizeof(&self.header).await?.commit()?.sizeof(&self.payload).await?;
+        ctx.sizeof(&self.header)
+            .await?
+            .commit()?
+            .sizeof(&self.payload)
+            .await?;
         let buf_size = ctx.finalize();
 
         let mut buf = vec![0; buf_size];

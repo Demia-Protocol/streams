@@ -23,8 +23,11 @@ mod scenarios;
 // #[derive(Deserialize)]
 // struct Ignored {}
 
-// impl TryFrom<Message
-trait GenericTransport<SR>: for<'a> Transport<'a, Msg = TransportMessage, SendResponse = SR> + Clone + Send + Sync {}
+// cargo run --example full-example
+trait GenericTransport<SR>:
+    for<'a> Transport<'a, Msg = TransportMessage, SendResponse = SR> + Clone + Send + Sync
+{
+}
 
 impl<T, SR> GenericTransport<SR> for T where
     T: for<'a> Transport<'a, Msg = TransportMessage, SendResponse = SR> + Clone + Send + Sync
@@ -65,7 +68,10 @@ async fn run_basic_scenario<SR, T: GenericTransport<SR>>(transport: T, seed: &st
 }
 
 #[cfg(not(feature = "did"))]
-async fn run_filter_branch_test<SR, T: GenericTransport<SR>>(transport: T, seed: &str) -> Result<()> {
+async fn run_filter_branch_test<SR, T: GenericTransport<SR>>(
+    transport: T,
+    seed: &str,
+) -> Result<()> {
     println!("## Running filter test with seed: {} ##\n", seed);
     let result = scenarios::filter::example(transport, seed).await;
     match &result {
@@ -94,17 +100,31 @@ async fn main_pure() -> Result<()> {
     Ok(())
 }
 
+async fn run_expiration<SR, T: GenericTransport<SR>>(transport: T, seed: &str) -> Result<()> {
+    println!("## Running expiration test with seed: {} ##\n", seed);
+    let result = scenarios::expired::example(transport, seed).await;
+    match &result {
+        Err(err) => eprintln!("Error in expiration test: {}", err),
+        Ok(_) => println!("\n## Expiration Test completed successfully!! ##\n"),
+    };
+    result
+}
+
 #[cfg(feature = "tangle-client")]
 async fn main_tangle_client() -> Result<()> {
     // Parse env vars with a fallback
-    let node_url = env::var("URL").unwrap_or_else(|_| "https://chrysalis-nodes.iota.org".to_string());
+    let node_url =
+        env::var("URL").unwrap_or_else(|_| "https://chrysalis-nodes.iota.org".to_string());
 
     println!("\n");
     println!(
         "#####################################################{}",
         "#".repeat(node_url.len())
     );
-    println!("Running tests accessing Tangle with iota.rs via node {}", &node_url);
+    println!(
+        "Running tests accessing Tangle with iota.rs via node {}",
+        &node_url
+    );
     println!(
         "#####################################################{}",
         "#".repeat(node_url.len())
@@ -142,14 +162,18 @@ async fn main_tangle_client() -> Result<()> {
 #[cfg(feature = "utangle-client")]
 async fn main_utangle_client() -> Result<()> {
     // Parse env vars with a fallback
-    let node_url = env::var("URL").unwrap_or_else(|_| "https://chrysalis-nodes.iota.org".to_string());
+    let node_url =
+        env::var("URL").unwrap_or_else(|_| "https://chrysalis-nodes.iota.org".to_string());
 
     println!("\n");
     println!(
         "#####################################################{}",
         "#".repeat(node_url.len())
     );
-    println!("Running tests accessing Tangle with uTangle via node {}", &node_url);
+    println!(
+        "Running tests accessing Tangle with uTangle via node {}",
+        &node_url
+    );
     println!(
         "#####################################################{}",
         "#".repeat(node_url.len())
@@ -158,8 +182,9 @@ async fn main_utangle_client() -> Result<()> {
 
     let transport: utangle::Client = utangle::Client::new(&node_url);
 
+    run_expiration(transport, &new_seed()).await?;
     #[cfg(feature = "did")]
-    run_did_scenario(transport.clone()).await?;
+    //run_did_scenario(transport.clone()).await?;
     #[cfg(not(feature = "did"))]
     {
         run_basic_scenario(transport.clone(), &new_seed()).await?;
@@ -185,7 +210,12 @@ async fn main_utangle_client() -> Result<()> {
 fn new_seed() -> String {
     let alph9 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
     (0..10)
-        .map(|_| alph9.chars().nth(rand::thread_rng().gen_range(0..27)).unwrap())
+        .map(|_| {
+            alph9
+                .chars()
+                .nth(rand::thread_rng().gen_range(0..27))
+                .unwrap()
+        })
         .collect::<String>()
 }
 

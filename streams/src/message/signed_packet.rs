@@ -26,7 +26,9 @@ use async_trait::async_trait;
 // Streams
 use lets::{
     id::{Identifier, Identity},
-    message::{ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap},
+    message::{
+        ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
+    },
 };
 use spongos::{
     ddml::{
@@ -97,7 +99,7 @@ where
             .mask(signed_packet.user_id.identifier())?
             .absorb(Bytes::new(signed_packet.public_payload))?
             .mask(Bytes::new(signed_packet.masked_payload))?
-            .sign(&mut signed_packet.user_id)
+            .sign(signed_packet.user_id)
             .await?;
         Ok(self)
     }

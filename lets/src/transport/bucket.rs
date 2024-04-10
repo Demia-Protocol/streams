@@ -4,6 +4,9 @@ use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, vec::Vec};
 // 3rd-party
 use async_trait::async_trait;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 // IOTA
 
 // Streams
@@ -78,7 +81,11 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        self.bucket.lock().entry(addr).or_default().push(msg.clone());
+        self.bucket
+            .lock()
+            .entry(addr)
+            .or_default()
+            .push(msg.clone());
         Ok(msg)
     }
 
@@ -96,5 +103,31 @@ where
             .get(&address)
             .cloned()
             .ok_or(Error::AddressError("No message found", address))
+    }
+
+    async fn latest_timestamp(&self) -> Result<u128> {
+        let start = std::time::SystemTime::now();
+        Ok(start
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<Msg: Serialize> Serialize for Client<Msg> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let bucket = self.bucket.lock();
+        bucket.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, Msg: Deserialize<'de>> Deserialize<'de> for Client<Msg> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let bucket: BTreeMap<Address, Vec<Msg>> = Deserialize::deserialize(deserializer)?;
+        Ok(Client {
+            bucket: Arc::new(spin::Mutex::new(bucket)),
+        })
     }
 }

@@ -2,6 +2,7 @@
 pub mod basic;
 #[cfg(feature = "did")]
 pub mod did;
+pub mod expired;
 #[cfg(not(feature = "did"))]
 pub mod filter;
 #[cfg(not(feature = "did"))]

@@ -10,7 +10,7 @@ mod psk;
 pub use self::identity::{Identity, IdentityKind};
 pub use ed25519::{Ed25519, Ed25519Pub, Ed25519Sig};
 pub use identifier::Identifier;
-pub use permission::{PermissionDuration, Permissioned};
+pub use permission::{PermissionDuration, PermissionType, Permissioned};
 pub use psk::{Psk, PskId};
 
 /// Iota Identity functions and types

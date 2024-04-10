@@ -125,7 +125,9 @@ where
     OS: io::OStream,
 {
     fn mask(&mut self, spongos: &Spongos<F>) -> Result<&mut Self> {
-        MaskContext::new(self).wrapn(spongos.outer())?.wrapn(spongos.inner())?;
+        MaskContext::new(self)
+            .wrapn(spongos.outer())?
+            .wrapn(spongos.inner())?;
         Ok(self)
     }
 }

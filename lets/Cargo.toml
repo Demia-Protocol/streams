@@ -14,7 +14,7 @@ readme = "README.md"
 version = "0.2.1"
 
 [features]
-default = ["utangle-client"]
+default = ["utangle-client", "serde"]
 std = ["spongos/std"]
 # Enable the IOTA-Tangle transport client (implies `std` features)
 tangle-client = ["iota-client", "futures", "serde", "iota-crypto/blake2b"]
@@ -28,6 +28,8 @@ bucket = ["spin"]
 did = ["identity_iota", "iota-client", "serde", "iota_stronghold", "iota-crypto/x25519-dalek", "hkdf"]
 # Enable client for mysql,
 mysql-client = ["sqlx", "std"]
+# Error and serialization
+serde = ["dep:serde"]
 
 [dependencies]
 # Local dependencies
@@ -35,7 +37,7 @@ mysql-client = ["sqlx", "std"]
 spongos = {path = "../spongos", default-features = false, features = ["osrng"]}
 
 # IOTA dependencies
-iota-crypto = {version = "0.15.3", default-features = false, features = ["x25519", "ed25519", "sha", "blake2b"]}
+iota-crypto = {version = "0.23.1", default-features = false, features = ["x25519", "ed25519", "sha", "blake2b", "aes-gcm", "cipher", "serde", "random"]}
 hkdf = {version = "0.12.3", optional = true}
 
 # 3rd-party dependencies
@@ -46,9 +48,10 @@ prefix-hex = "0.7.0"
 
 # Optional dependencies
 futures = {version = "0.3.8", default-features = false, optional = true}
-identity_iota = {git = "https://github.com/demia-protocol/identity.rs", branch = "demia/modified-client-dep", default-features = true, optional = true}
-iota-client = {git = "https://github.com/demia-protocol/iota.rs", branch = "demia/adapter-with-encryption", features = ["tls", "stronghold"], optional = true}
-iota_stronghold = {version = "1.0.5", optional = true}
+identity_iota = { git = "https://github.com/demia-protocol/demia-sdk", default-features = true, optional = true}
+iota-client = { git = "https://github.com/demia-protocol/demia-sdk", features = ["tls", "stronghold"], optional = true}
+iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", optional = true}
+
 reqwest = {version = "0.11.11", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
 serde-big-array = { version = "0.4", default-features = false}

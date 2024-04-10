@@ -48,7 +48,10 @@ impl Size {
     ///
     /// # Arguments
     /// * `codec`: a function for decoding bytes from a [`Spongos`] stream
-    pub(crate) fn decode(mut codec: impl FnMut(&mut u8) -> Result<()>, mut num_bytes: u8) -> Result<Self> {
+    pub(crate) fn decode(
+        mut codec: impl FnMut(&mut u8) -> Result<()>,
+        mut num_bytes: u8,
+    ) -> Result<Self> {
         let mut result = 0usize;
         while 0 < num_bytes {
             num_bytes -= 1;

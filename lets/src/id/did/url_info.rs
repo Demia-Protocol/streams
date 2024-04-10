@@ -3,7 +3,7 @@ use alloc::{string::String, vec::Vec};
 use core::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
-    hash::Hasher
+    hash::Hasher,
 };
 
 // IOTA
@@ -12,7 +12,7 @@ use identity_iota::{core::BaseEncoding, iota::IotaDID, verification::MethodData}
 use crate::{
     alloc::string::ToString,
     error::{Error, Result},
-    id::did::StrongholdSecretManager
+    id::did::StrongholdSecretManager,
 };
 
 // Streams
@@ -27,6 +27,7 @@ use spongos::{
 };
 
 /// `DID` Document details
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DIDUrlInfo {
     /// `DID` string
     did: String,
@@ -37,6 +38,10 @@ pub struct DIDUrlInfo {
     /// Fragment label for signature key method
     signing_fragment: String,
     /// Stronghold Adapter
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none", skip)
+    )]
     stronghold: Option<StrongholdSecretManager>,
 }
 
@@ -85,7 +90,7 @@ impl Eq for DIDUrlInfo {}
 
 impl PartialOrd for DIDUrlInfo {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 
@@ -113,7 +118,12 @@ impl DIDUrlInfo {
     /// * `stronghold`: Stronghold path
     /// * `exchange_fragment`: Label for exchange key methods
     /// * `signing_fragment`: Label for signature key methods
-    pub fn new<T: Into<String>>(did: IotaDID, client_url: T, exchange_fragment: T, signing_fragment: T) -> Self {
+    pub fn new<T: Into<String>>(
+        did: IotaDID,
+        client_url: T,
+        exchange_fragment: T,
+        signing_fragment: T,
+    ) -> Self {
         Self {
             did: did.to_string(),
             client_url: client_url.into(),
@@ -129,9 +139,10 @@ impl DIDUrlInfo {
     }
 
     pub fn stronghold(&mut self) -> Result<&mut StrongholdSecretManager> {
-        self.stronghold
-            .as_mut()
-            .ok_or(Error::did("fetching stronghold", "stronghold not found".to_string()))
+        self.stronghold.as_mut().ok_or(Error::did(
+            "fetching stronghold",
+            "stronghold not found".to_string(),
+        ))
     }
 
     /// Authenticates a hash value and the associated signature using the publisher [`DIDUrlInfo`]
@@ -140,7 +151,12 @@ impl DIDUrlInfo {
     /// * `signing_fragment`: Label for exchange key methods
     /// * `signature_bytes`: Raw bytes for signature
     /// * `hash`: Hash value used for signature
-    pub(crate) async fn verify(&self, signing_fragment: &str, signature_bytes: &[u8], hash: &[u8]) -> Result<()> {
+    pub(crate) async fn verify(
+        &self,
+        signing_fragment: &str,
+        signature_bytes: &[u8],
+        hash: &[u8],
+    ) -> Result<()> {
         let doc = super::resolve_document(self).await?;
         let method = doc.resolve_method(signing_fragment, None).unwrap();
         match method.data() {
@@ -150,14 +166,19 @@ impl DIDUrlInfo {
                     .map_err(|e| Error::did("verify data from document", e.to_string()))?
                     .try_into()
                     .unwrap();
-                let sig = crypto::signatures::ed25519::Signature::from_bytes(signature_bytes.try_into().unwrap());
+                let sig = crypto::signatures::ed25519::Signature::from_bytes(
+                    signature_bytes.try_into().unwrap(),
+                );
                 if crypto::signatures::ed25519::PublicKey::try_from(pk_bytes)
                     .unwrap()
                     .verify(&sig, hash)
                 {
                     Ok(())
                 } else {
-                    Err(Error::did("verify data from document", "failed to verify".to_string()))
+                    Err(Error::did(
+                        "verify data from document",
+                        "failed to verify".to_string(),
+                    ))
                 }
             }
             _ => Err(Error::did(
@@ -255,14 +276,26 @@ where
 
         // Errors read as: "Context failed to perform the message command "Mask DIDUrlInfo"; Error: {TAG} is
         // not encoded in utf8 or the encoding is incorrect: External error: {utf8Error}""
-        *url_info.did_mut() = String::from_utf8(did_bytes)
-            .map_err(|e| SpongosError::Context("Mask DIDUrlInfo", Error::utf("did", e).to_string()))?;
-        *url_info.client_url_mut() = String::from_utf8(client_url)
-            .map_err(|e| SpongosError::Context("Mask DIDUrlInfo", Error::utf("client url", e).to_string()))?;
-        *url_info.exchange_fragment_mut() = String::from_utf8(exchange_fragment_bytes)
-            .map_err(|e| SpongosError::Context("Mask DIDUrlInfo", Error::utf("exchange fragment", e).to_string()))?;
-        *url_info.signing_fragment_mut() = String::from_utf8(signing_fragment_bytes)
-            .map_err(|e| SpongosError::Context("Mask DIDUrlInfo", Error::utf("signing fragment", e).to_string()))?;
+        *url_info.did_mut() = String::from_utf8(did_bytes).map_err(|e| {
+            SpongosError::Context("Mask DIDUrlInfo", Error::utf("did", e).to_string())
+        })?;
+        *url_info.client_url_mut() = String::from_utf8(client_url).map_err(|e| {
+            SpongosError::Context("Mask DIDUrlInfo", Error::utf("client url", e).to_string())
+        })?;
+        *url_info.exchange_fragment_mut() =
+            String::from_utf8(exchange_fragment_bytes).map_err(|e| {
+                SpongosError::Context(
+                    "Mask DIDUrlInfo",
+                    Error::utf("exchange fragment", e).to_string(),
+                )
+            })?;
+        *url_info.signing_fragment_mut() =
+            String::from_utf8(signing_fragment_bytes).map_err(|e| {
+                SpongosError::Context(
+                    "Mask DIDUrlInfo",
+                    Error::utf("signing fragment", e).to_string(),
+                )
+            })?;
         Ok(self)
     }
 }

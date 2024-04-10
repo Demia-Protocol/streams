@@ -20,7 +20,8 @@ use spongos::{
 use crate::error::Result;
 
 /// A wrapper around a `String` used for identifying a branch within a `Stream`
-#[derive(Clone, PartialEq, Eq, Debug, Default, Hash, serde::Serialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Topic(String);
 
 impl Topic {
@@ -114,9 +115,9 @@ where
     fn mask(&mut self, topic: &mut Topic) -> SpongosResult<&mut Self> {
         let mut topic_bytes = topic.as_ref().to_vec();
         self.mask(Bytes::new(&mut topic_bytes))?;
-        *topic = topic_bytes
-            .try_into()
-            .map_err(|e: crate::error::Error| spongos::error::Error::Context("Mask", e.to_string()))?;
+        *topic = topic_bytes.try_into().map_err(|e: crate::error::Error| {
+            spongos::error::Error::Context("Mask", e.to_string())
+        })?;
         Ok(self)
     }
 }

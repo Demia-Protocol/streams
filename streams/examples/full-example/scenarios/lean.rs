@@ -20,7 +20,10 @@ const BASE_BRANCH: &str = "BASE_BRANCH";
 const BRANCH1: &str = "BRANCH1";
 const BRANCH2: &str = "BRANCH2";
 
-pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_seed: &str) -> Result<()> {
+pub(crate) async fn example<SR, T: GenericTransport<SR>>(
+    transport: T,
+    author_seed: &str,
+) -> Result<()> {
     let psk = Psk::from_seed("unique psk seed");
 
     let mut author = User::builder()
@@ -42,15 +45,44 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     println!("author creates channel");
     let announcement = author.create_stream(BASE_BRANCH).await?;
 
-    fat_subscriber.receive_message(announcement.address()).await?;
-    lean_subscriber.receive_message(announcement.address()).await?;
+    fat_subscriber
+        .receive_message(announcement.address())
+        .await?;
+    lean_subscriber
+        .receive_message(announcement.address())
+        .await?;
 
     println!("author sends a few messages to the base branch");
-    let first_message = author.message().with_payload(PAYLOAD).signed().send().await?;
-    let _second_message = author.message().with_payload(PAYLOAD).signed().send().await?;
-    let middle_message = author.message().with_payload(PAYLOAD).signed().send().await?;
-    let _third_message = author.message().with_payload(PAYLOAD).signed().send().await?;
-    let last_message = author.message().with_payload(PAYLOAD).signed().send().await?;
+    let first_message = author
+        .message()
+        .with_payload(PAYLOAD)
+        .signed()
+        .send()
+        .await?;
+    let _second_message = author
+        .message()
+        .with_payload(PAYLOAD)
+        .signed()
+        .send()
+        .await?;
+    let middle_message = author
+        .message()
+        .with_payload(PAYLOAD)
+        .signed()
+        .send()
+        .await?;
+    let _third_message = author
+        .message()
+        .with_payload(PAYLOAD)
+        .signed()
+        .send()
+        .await?;
+    let last_message = author
+        .message()
+        .with_payload(PAYLOAD)
+        .signed()
+        .send()
+        .await?;
 
     // sync subscribers to retrieve all available messages
     sync_subs(&mut fat_subscriber, &mut lean_subscriber).await?;
@@ -93,7 +125,10 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T, author_se
     Ok(())
 }
 
-async fn sync_subs<SR, T: GenericTransport<SR>>(fat: &mut User<T>, lean: &mut User<T>) -> Result<()> {
+async fn sync_subs<SR, T: GenericTransport<SR>>(
+    fat: &mut User<T>,
+    lean: &mut User<T>,
+) -> Result<()> {
     print!("\nsubscribers syncing...");
     fat.sync().await?;
     lean.sync().await?;
@@ -118,12 +153,16 @@ async fn retrieve_messages<SR, T: GenericTransport<SR>, TSR>(
     println!("\nfat subscriber tries to retrieve first, middle and last messages...");
     // The fat subscriber will be able to retrieve any previously received message again, as all
     // spongos states remainn stored in the user implementation
-    let received_first_message_as_fat = fat_subscriber.receive_message(first_message.address()).await;
+    let received_first_message_as_fat = fat_subscriber
+        .receive_message(first_message.address())
+        .await;
     assert!(
         received_first_message_as_fat.is_ok(),
         "fat subscriber should be able to read the first message in base branch"
     );
-    let received_second_message_as_fat = fat_subscriber.receive_message(middle_message.address()).await;
+    let received_second_message_as_fat = fat_subscriber
+        .receive_message(middle_message.address())
+        .await;
     assert!(
         received_second_message_as_fat.is_ok(),
         "fat subscriber should be able to read the middle message in base branch"
@@ -138,21 +177,27 @@ async fn retrieve_messages<SR, T: GenericTransport<SR>, TSR>(
     println!("\nlean subscriber tries to retrieve first, middle and last messages...");
     // The lean subscriber will be able to receive the first message because it is linked to the
     // announcement message, who's spongos state will always be stored
-    let received_first_message_as_lean = lean_subscriber.receive_message(first_message.address()).await;
+    let received_first_message_as_lean = lean_subscriber
+        .receive_message(first_message.address())
+        .await;
     assert!(
         received_first_message_as_lean.is_ok(),
         "lean subscriber should be able to read the first message"
     );
     // The lean subscriber will not be able to receive the middle message because it is linked to a
     // pruned spongos state (first_message)
-    let received_second_message_as_lean = lean_subscriber.receive_message(middle_message.address()).await?;
+    let received_second_message_as_lean = lean_subscriber
+        .receive_message(middle_message.address())
+        .await?;
     assert!(
         received_second_message_as_lean.is_orphan(),
         "lean subscriber should not be able to read the middle message"
     );
     // The lean subscriber will also be able to receive the last message, because it is the latest
     // spongos state to have been stored
-    let received_last_message_as_lean = lean_subscriber.receive_message(last_message.address()).await;
+    let received_last_message_as_lean = lean_subscriber
+        .receive_message(last_message.address())
+        .await;
     assert!(
         received_last_message_as_lean.is_ok(),
         "lean subscriber should be able to read the last message"

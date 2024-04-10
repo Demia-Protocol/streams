@@ -7,6 +7,7 @@ use super::PRP;
 
 /// A psuedo-random permutation implementing `Keccak-F[1600]`
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct KeccakF1600 {
     /// Inner state for transformation
     state: [u64; 25],
@@ -41,6 +42,8 @@ impl PRP for KeccakF1600 {
     }
 
     fn inner_mut(&mut self) -> &mut GenericArray<u8, Self::CapacitySize> {
-        unsafe { &mut *(self.state.as_mut_ptr().add(21) as *mut GenericArray<u8, Self::CapacitySize>) }
+        unsafe {
+            &mut *(self.state.as_mut_ptr().add(21) as *mut GenericArray<u8, Self::CapacitySize>)
+        }
     }
 }

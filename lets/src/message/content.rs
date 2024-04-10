@@ -68,7 +68,8 @@ pub trait ContentEncrypt<T> {
 /// Used to encrypt a key slice for recipient `T` using Identity `I`
 #[async_trait]
 pub trait ContentEncrypt<I, T> {
-    async fn encrypt(&mut self, sender: &mut I, recipient: &mut T, key: &[u8]) -> Result<&mut Self>;
+    async fn encrypt(&mut self, sender: &mut I, recipient: &mut T, key: &[u8])
+        -> Result<&mut Self>;
 }
 
 /// Used to decrypt a key slice for recipient `T`

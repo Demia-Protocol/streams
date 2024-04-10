@@ -11,6 +11,7 @@ where
     I: iter::Iterator,
     C: for<'b> FnMut(&'b mut Self, <I as iter::Iterator>::Item) -> Result<&'b mut Self>,
 {
+    #[allow(clippy::manual_try_fold)]
     fn repeated(&mut self, values_iter: I, mut value_handle: C) -> Result<&mut Self> {
         values_iter.fold(Ok(self), |rctx, item| -> Result<&mut Self> {
             match rctx {

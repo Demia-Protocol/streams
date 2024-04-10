@@ -30,7 +30,10 @@ impl<'a, F, OS: io::OStream> Wrap for SkipContext<'a, F, OS> {
         T: AsRef<[u8]>,
     {
         let bytes = bytes.as_ref();
-        self.ctx.stream.try_advance(bytes.len())?.copy_from_slice(bytes);
+        self.ctx
+            .stream
+            .try_advance(bytes.len())?
+            .copy_from_slice(bytes);
         Ok(self)
     }
 }
