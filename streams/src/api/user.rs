@@ -1,12 +1,6 @@
 // Rust
-use alloc::{
-    borrow::ToOwned,
-    boxed::Box,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{borrow::ToOwned, boxed::Box, string::ToString, vec::Vec};
 use core::fmt::{Debug, Formatter, Result as FormatResult};
-use serde::Serialize;
 
 // 3rd-party
 use async_trait::async_trait;
@@ -1058,8 +1052,9 @@ impl<T> PartialEq for User<T> {
 /// considered equal
 impl<T> Eq for User<T> {}
 
-impl<T: Serialize> Serialize for User<T> {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+#[cfg(feature = "serde")]
+impl<T: serde::Serialize> serde::Serialize for User<T> {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {

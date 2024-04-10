@@ -1,6 +1,7 @@
 //! Stream Errors
 
 // Rust
+use alloc::string::String;
 use core::{array::TryFromSliceError, fmt::Debug};
 
 // 3rd-party
