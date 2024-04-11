@@ -131,7 +131,7 @@ impl Identifier {
                 let doc = resolve_document(url_info).await?;
                 match doc.resolve_method(
                     url_info.exchange_fragment(),
-                    Some(identity_iota::verification::MethodScope::key_agreement()),
+                    Some(identity_demia::verification::MethodScope::key_agreement()),
                 ) {
                     Some(e) => Ok(x25519::PublicKey::try_from_slice(
                         &e.data()

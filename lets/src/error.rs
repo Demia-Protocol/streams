@@ -22,52 +22,52 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[cfg(feature = "did")]
 pub enum IdentityError {
     #[error("{0}")]
-    Core(identity_iota::core::Error),
+    Core(identity_demia::core::Error),
     #[error("{0}")]
-    DIDError(identity_iota::did::Error),
+    DIDError(identity_demia::did::Error),
     #[error("{0}")]
-    Verification(identity_iota::verification::Error),
+    Verification(identity_demia::verification::Error),
     #[error("{0}")]
     IotaClient(iota_client::Error),
     #[error("{0}")]
-    Iota(identity_iota::iota::Error),
+    Iota(identity_demia::demia::Error),
     #[error("{0}")]
-    Doc(identity_iota::document::Error),
+    Doc(identity_demia::document::Error),
     #[error("{0}")]
     Other(String),
 }
 
 #[cfg(feature = "did")]
-impl From<identity_iota::core::Error> for IdentityError {
-    fn from(error: identity_iota::core::Error) -> Self {
+impl From<identity_demia::core::Error> for IdentityError {
+    fn from(error: identity_demia::core::Error) -> Self {
         Self::Core(error)
     }
 }
 
 #[cfg(feature = "did")]
-impl From<identity_iota::did::Error> for IdentityError {
-    fn from(error: identity_iota::did::Error) -> Self {
+impl From<identity_demia::did::Error> for IdentityError {
+    fn from(error: identity_demia::did::Error) -> Self {
         Self::DIDError(error)
     }
 }
 
 #[cfg(feature = "did")]
-impl From<identity_iota::verification::Error> for IdentityError {
-    fn from(error: identity_iota::verification::Error) -> Self {
+impl From<identity_demia::verification::Error> for IdentityError {
+    fn from(error: identity_demia::verification::Error) -> Self {
         Self::Verification(error)
     }
 }
 
 #[cfg(feature = "did")]
-impl From<identity_iota::document::Error> for IdentityError {
-    fn from(error: identity_iota::document::Error) -> Self {
+impl From<identity_demia::document::Error> for IdentityError {
+    fn from(error: identity_demia::document::Error) -> Self {
         Self::Doc(error)
     }
 }
 
 #[cfg(feature = "did")]
-impl From<identity_iota::iota::Error> for IdentityError {
-    fn from(error: identity_iota::iota::Error) -> Self {
+impl From<identity_demia::demia::Error> for IdentityError {
+    fn from(error: identity_demia::demia::Error) -> Self {
         Self::Iota(error)
     }
 }

@@ -7,7 +7,7 @@ use core::{
 };
 
 // IOTA
-use identity_iota::{core::BaseEncoding, iota::IotaDID, verification::MethodData};
+use identity_demia::{core::BaseEncoding, demia::DemiaDID, verification::MethodData};
 
 use crate::{
     alloc::string::ToString,
@@ -48,7 +48,7 @@ pub struct DIDUrlInfo {
 impl Default for DIDUrlInfo {
     fn default() -> Self {
         DIDUrlInfo::new(
-            IotaDID::new(&[0_u8; 32], &"dflt".try_into().unwrap()),
+            DemiaDID::new(&[0_u8; 32], &isocountry::CountryCode::USA, &"dflt".try_into().unwrap()),
             String::new(),
             String::new(),
             String::new(),
@@ -119,7 +119,7 @@ impl DIDUrlInfo {
     /// * `exchange_fragment`: Label for exchange key methods
     /// * `signing_fragment`: Label for signature key methods
     pub fn new<T: Into<String>>(
-        did: IotaDID,
+        did: DemiaDID,
         client_url: T,
         exchange_fragment: T,
         signing_fragment: T,
