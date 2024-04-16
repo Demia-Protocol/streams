@@ -201,7 +201,7 @@ impl<T> User<T> {
     ///
     /// # Arguments
     /// * `topic`: The [`Topic`] of the branch to check
-    pub(crate) fn cursor(&self, topic: &Topic) -> Option<usize> {
+    pub fn cursor(&self, topic: &Topic) -> Option<usize> {
         self.identifier()
             .and_then(|id| self.state.cursor_store.get_cursor(topic, id))
     }
@@ -211,7 +211,7 @@ impl<T> User<T> {
     ///
     /// # Arguments
     /// * `topic`: The [`Topic`] of the branch to check
-    pub(crate) fn next_cursor(&self, topic: &Topic) -> Result<usize> {
+    pub fn next_cursor(&self, topic: &Topic) -> Result<usize> {
         self.cursor(topic)
             .map(|c| c + 1)
             .ok_or(Error::NoCursor(topic.clone()))
@@ -247,20 +247,26 @@ impl<T> User<T> {
     ///
     /// # Arguments
     /// * `hash`: The [`TopicHash`] from a message header
-    pub(crate) fn topic_by_hash(&self, hash: &TopicHash) -> Option<Topic> {
+    pub fn topic_by_hash(&self, hash: &TopicHash) -> Option<Topic> {
         self.topics()
             .find(|t| &TopicHash::from(*t) == hash)
             .cloned()
     }
 
     /// Returns true if [`User`] lean state configuration is true
-    pub(crate) fn lean(&self) -> bool {
+    pub fn lean(&self) -> bool {
         self.state.lean
+    }
+
+    /// Returns the identifier of the stream author.
+    /// None if channel is not created or user is not subscribed.
+    pub fn author(&self) -> Option<&Identifier> {
+        self.state.author_identifier.as_ref()
     }
 
     /// Returns an iterator over [`CursorStore`], producing tuples of [`Topic`], [`Permissioned`]
     /// [`Identifier`], and the cursor. Used by [`Messages`] streams to find next messages.
-    pub(crate) fn cursors(
+    pub fn cursors(
         &self,
     ) -> impl Iterator<Item = (&Topic, &Permissioned<Identifier>, usize)> + '_ {
         self.state.cursor_store.cursors()
@@ -272,7 +278,7 @@ impl<T> User<T> {
     ///
     /// # Arguments
     /// * `topic`: The [`Topic`] of the branch to fetch cursors for
-    pub(crate) fn cursors_by_topic(
+    pub fn cursors_by_topic(
         &self,
         topic: &Topic,
     ) -> Result<impl Iterator<Item = (&Permissioned<Identifier>, &usize)>> {

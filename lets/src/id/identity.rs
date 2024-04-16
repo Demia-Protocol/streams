@@ -11,7 +11,7 @@ use async_trait::async_trait;
 // IOTA
 use crypto::signatures::ed25519;
 #[cfg(feature = "did")]
-use identity_iota::{did::DID as IdentityDID, iota::IotaDID};
+use identity_demia::{did::DID as IdentityDID, demia::DemiaDID};
 
 #[cfg(feature = "did")]
 use iota_client::{api::EncryptedData, stronghold::Location};
@@ -187,7 +187,7 @@ impl IdentityKind {
                 } else {
                     fragment
                 };
-                let method = IotaDID::parse(did_url)
+                let method = DemiaDID::parse(did_url)
                     .map_err(|e| {
                         SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
                     })?
@@ -341,7 +341,7 @@ where
                         } else {
                             fragment
                         };
-                        let method = IotaDID::parse(did_url)
+                        let method = DemiaDID::parse(did_url)
                             .map_err(|e| {
                                 SpongosError::Context(
                                     "ContentSign",

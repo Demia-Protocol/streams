@@ -2,8 +2,8 @@
 use core::hash::Hash;
 
 // IOTA
-use identity_iota::{
-    iota::{IotaDID, IotaDocument, IotaIdentityClientExt},
+use identity_demia::{
+    demia::{DemiaDID, IotaDocument, IotaIdentityClientExt},
     verification::VerificationMethod,
 };
 use iota_client::Client as DIDClient;
@@ -29,7 +29,7 @@ use crate::{
 /// # Arguments
 /// * `url_info`: The document details
 pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<IotaDocument> {
-    let did_url = IotaDID::parse(url_info.did()).map_err(|e| Error::did("parse did url", e))?;
+    let did_url = DemiaDID::parse(url_info.did()).map_err(|e| Error::did("parse did url", e))?;
     let client = DIDClient::builder()
         .with_primary_node(url_info.client_url(), None)
         .map_err(|e| Error::did("DIDClient set primary node", e))?
@@ -147,7 +147,7 @@ impl DIDInfo {
 }
 
 /// Wrapper for a `DID` based KeyPair
-struct KeyPair(identity_iota::crypto::KeyPair);
+struct KeyPair(identity_demia::crypto::KeyPair);
 
 impl PartialEq for KeyPair {
     fn eq(&self, other: &Self) -> bool {

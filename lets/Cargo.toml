@@ -25,7 +25,7 @@ utangle-client = ["reqwest", "serde", "rayon", "iota-crypto/curl-p"]
 # Enable bucket transport Client
 bucket = ["spin"]
 # Enable Iota Identity for use with Streams
-did = ["identity_iota", "iota-client", "serde", "iota_stronghold", "iota-crypto/x25519-dalek", "hkdf"]
+did = ["identity_demia", "isocountry", "iota-client", "serde", "iota_stronghold", "iota-crypto/x25519-dalek", "hkdf"]
 # Enable client for mysql,
 mysql-client = ["sqlx", "std"]
 # Error and serialization
@@ -48,7 +48,9 @@ prefix-hex = "0.7.0"
 
 # Optional dependencies
 futures = {version = "0.3.8", default-features = false, optional = true}
-identity_iota = { git = "https://github.com/demia-protocol/demia-sdk", default-features = true, optional = true}
+identity_demia = { git = "https://github.com/demia-protocol/demia-sdk", default-features = true, optional = true}
+isocountry = { version = "0.3", optional = true }
+
 iota-client = { git = "https://github.com/demia-protocol/demia-sdk", features = ["tls", "stronghold"], optional = true}
 iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", optional = true}
 
