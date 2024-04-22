@@ -184,7 +184,7 @@ where
 
     async fn latest_timestamp(&self) -> Result<u128> {
         let network_info = self.get_network_info().await?;
-        Ok(network_info.status.latest_milestone.timestamp as u128)
+        Ok((network_info.status.latest_milestone.timestamp as u128) * 1000)
     }
 }
 
@@ -256,6 +256,7 @@ pub struct Status {
 #[serde(rename_all = "camelCase")]
 pub struct Milestone {
     pub index: u32,
+    // Time stamp in seconds
     pub timestamp: u64,
 }
 

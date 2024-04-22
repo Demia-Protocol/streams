@@ -131,7 +131,7 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(
     );
 
     // Wait to ensure the permission is expired with added delay for milestones
-    wait_until(write_permission_duration.timestamp() + 10).await;
+    wait_until(write_permission_duration.timestamp() + 10000).await;
 
     println!("> Subscriber A attempts to send a signed packet (should fail)");
     let result = subscriber_a
