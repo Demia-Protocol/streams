@@ -16,7 +16,7 @@ impl Ed25519<&ed25519::SecretKey, External<&NBytes<[u8; 64]>>> for Context {
         _sk: &ed25519::SecretKey,
         _hash: External<&NBytes<[u8; 64]>>,
     ) -> Result<&mut Self> {
-        self.size += ed25519::SecretKey::LENGTH;
+        self.size += ed25519::Signature::LENGTH;
         Ok(self)
     }
 }

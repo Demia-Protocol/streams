@@ -182,11 +182,11 @@ async fn main_utangle_client() -> Result<()> {
 
     let transport: utangle::Client = utangle::Client::new(&node_url);
 
-    run_expiration(transport, &new_seed()).await?;
     #[cfg(feature = "did")]
-    //run_did_scenario(transport.clone()).await?;
+    run_did_scenario(transport.clone()).await?;
     #[cfg(not(feature = "did"))]
     {
+        run_expiration(transport.clone(), &new_seed()).await?;
         run_basic_scenario(transport.clone(), &new_seed()).await?;
         run_lean_test(transport, &new_seed()).await?;
     }

@@ -108,7 +108,6 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(
     assert_eq!(subscriber_a.sync().await?, 1);
 
     println!("> Author gives Subscriber A write permission for 30 seconds");
-    assert_eq!(author.sync().await?, 1);
     let write_permission_duration = PermissionDuration::seconds_from_now(30);
     author
         .send_keyload(

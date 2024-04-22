@@ -5,9 +5,9 @@ use anyhow::anyhow;
 use textwrap::{fill, indent};
 
 // IOTA
-use identity_iota::{
+use identity_demia::{
     crypto::{KeyPair, KeyType},
-    iota::{
+    demia::{
         block::{address::Address, output::AliasOutputBuilder},
         IotaClientExt, IotaDocument, IotaIdentityClientExt, NetworkName,
     },
@@ -40,6 +40,8 @@ const STRONGHOLD_URL: &str = "temp_stronghold";
 const FAUCET: &str = "http://68.183.204.219:8091/api/enqueue";
 const BASE_BRANCH: &str = "BASE_BRANCH";
 const BRANCH1: &str = "BRANCH1";
+
+const DEFALT_COUNTRY: isocountry::CountryCode = isocountry::CountryCode::USA;
 
 pub(crate) async fn example<SR, T: GenericTransport<SR>>(transport: T) -> Result<()> {
     let did_client = DIDClient::builder()
@@ -290,7 +292,7 @@ async fn make_did_info(
 
     // Publish the updated Alias Output.
     let updated = did_client
-        .publish_did_output(&stronghold, alias_output)
+        .publish_did_output(&stronghold, alias_output, &DEFALT_COUNTRY)
         .await?;
 
     // Create a new DIDInfo object with the stronghold included
@@ -347,7 +349,7 @@ async fn new_doc(
 ) -> anyhow::Result<IotaDocument> {
     // Create a new document with a base method
     let network_name: NetworkName = did_client.get_network_name().await?.try_into()?;
-    let mut doc = IotaDocument::new(&network_name);
+    let mut doc = IotaDocument::new(&DEFALT_COUNTRY, &network_name);
     let method = VerificationMethod::new(
         doc.id().clone(),
         KeyType::Ed25519,
@@ -359,7 +361,7 @@ async fn new_doc(
 
     // Create new alias output and publish it
     let output = did_client.new_did_output(output_address, doc, None).await?;
-    Ok(did_client.publish_did_output(&stronghold, output).await?)
+    Ok(did_client.publish_did_output(&stronghold, output, &DEFALT_COUNTRY).await?)
 }
 
 // Create the Ed25519 and X25519 keys that will be used by the streams user and store them into the

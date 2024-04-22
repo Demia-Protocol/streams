@@ -500,25 +500,20 @@ where
         }
     }
 
+    /**
+     * Sets the cursor of the identified user on the branch to the value or INIT_MESSAGE_NUM.
+     * If the identifier has a cursor stored with a different permission, 
+     * removes that permission (preserving the cursor).
+     */
     pub(crate) fn update_permissions(
         &mut self,
         topic: &Topic,
         permission: Permissioned<Identifier>,
         cursor: Option<usize>,
     ) {
+        // TODO: set old cursor and update when permisisons get updated to write again
         let cursor = cursor.unwrap_or(INIT_MESSAGE_NUM);
-
-        if let Some(c) = self
-            .state
-            .cursor_store
-            .get_cursor(topic, permission.identifier())
-        {
-            self.state.cursor_store.insert_cursor(topic, permission, c);
-        } else {
-            self.state
-                .cursor_store
-                .insert_cursor(topic, permission, cursor);
-        }
+        self.state.cursor_store.insert_cursor(topic, permission, cursor);
     }
 
     // TODO: Re-evaluate the way we process permissions twice per message
@@ -568,7 +563,6 @@ where
 
         if change {
             permission = Permissioned::Read(permission.identifier().clone());
-            // TODO: set old cursor and update when permisisons get updated to write again
             self.update_permissions(topic, permission.clone(), None);
         }
         Ok((change, permission))
