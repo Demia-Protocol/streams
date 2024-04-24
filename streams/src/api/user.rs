@@ -1028,12 +1028,6 @@ impl<T> Debug for User<T> {
             writeln!(f, "\t<{:?}>", pskid)?;
         }
 
-        writeln!(f, "* messages:")?;
-
-        for key in self.state.spongos_store.keys() {
-            writeln!(f, "\t<{}>", key)?;
-        }
-
         write!(f, "* lean: {}", self.state.lean)
     }
 }
