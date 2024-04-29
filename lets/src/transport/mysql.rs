@@ -84,6 +84,12 @@ impl<SM, DM> Client<SM, DM> {
         .await
         .map_err(|e| Error::MySqlClient("fetching message", e))?;
 
+        self.verify_sql_msg(&sql_message)?;
+
+        Ok(sql_message)
+    }
+
+    fn verify_sql_msg(&self, sql_message: &SqlMessage) -> Result<()> {
         if sql_message.signature.len() != 64 {
             return Err(Error::InvalidSize(
                 "signature",
@@ -110,8 +116,32 @@ impl<SM, DM> Client<SM, DM> {
         if !pk.verify(&sig, &sql_message.raw_content) {
             return Err(Error::Signature("verifying", "retrieve message"));
         }
+        Ok(())
+    }
 
-        Ok(sql_message)
+    // Bulk retrieval tool for sql db's
+    // TODO: Build out unit test for retrieving multiple messages
+    pub async fn retrieve_messages(&mut self, addresses: Vec<Address>) -> Result<Vec<SqlMessage>> {
+        let app_id_bytes = addresses[0].base().as_bytes().to_vec();
+        let msg_id_bytes: Vec<Vec<u8>> = addresses.iter()
+            .map(|addr| addr.relative().as_bytes().to_vec())
+            .collect();
+        let sql_messages: Vec<SqlMessage> = sqlx::query_as!(
+            SqlMessage,
+            r#"SELECT * FROM sql_messages WHERE msg_id IN (SELECT * FROM UNNEST(?)) AND app_id = ?"#,
+            msg_id_bytes,
+            app_id_bytes
+        )
+            .fetch_all(&self.0)
+            .await
+            .map_err(|e| Error::MySqlClient("fetching message", e))?
+            .collect();
+
+        sql_messages.iter().for_each(|msg| {
+            self.verify_sql_msg(msg)?;
+        });
+
+        Ok(sql_messages)
     }
 }
 
