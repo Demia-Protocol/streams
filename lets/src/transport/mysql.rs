@@ -75,7 +75,7 @@ impl<SM, DM> Client<SM, DM> {
     }
 
     // Sending multiple messages simultaneously. Messages are processed in chunks of 25
-    async fn insert_messages(&mut self, sql_msgs: &[SqlMessage]) -> Result<()> {
+    pub async fn insert_messages(&mut self, sql_msgs: &[SqlMessage]) -> Result<()> {
         // TODO: check sql error code to confirm it's just a 23000 (already stored) error
         let mut query = QueryBuilder::new(r#"INSERT INTO app (app_id) "#);
         query.push_values(sql_msgs.iter(), |mut q, sql_msg| {
