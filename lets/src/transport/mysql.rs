@@ -7,8 +7,6 @@ use crate::{
 };
 use alloc::vec::Vec;
 use async_trait::async_trait;
-//use base64::Engine;
-//use base64::prelude::BASE64_STANDARD;
 use serde::__private::PhantomData;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPool;
