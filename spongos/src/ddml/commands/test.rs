@@ -22,7 +22,7 @@ fn absorb_mask_u8<F>() -> Result<()>
 where
     F: PRP + Default,
 {
-    let mut buf = vec![0u8; 2];
+    let mut buf = [0u8; 2];
     let mut tag_wrap = [0; 32];
     let mut tag_unwrap = [0; 32];
 
