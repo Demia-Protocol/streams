@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use serde::__private::PhantomData;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPool;
-use sqlx::QueryBuilder;
+use sqlx::{Execute, QueryBuilder};
 
 /// -- Create the 'app' table
 /// CREATE TABLE IF NOT EXISTS app (
@@ -87,7 +87,8 @@ impl<SM, DM> Client<SM, DM> {
 
         // Loop through the messages in chunks of 25
         for chunk in sql_msgs.chunks(25) {
-            let mut query = QueryBuilder::new(r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#);
+            //TODO: investigate building query with binds to use ON DUPLICATE KEY UPDATE
+            let mut query = QueryBuilder::new(r#"INSERT IGNORE INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#);
             query.push_values(chunk.into_iter(), |mut b, msg| {
                 b.push_bind(&msg.msg_id)
                     .push_bind(&msg.raw_content)
