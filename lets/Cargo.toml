@@ -54,13 +54,13 @@ isocountry = { version = "0.3", optional = true }
 iota-client = { git = "https://github.com/demia-protocol/demia-sdk", features = ["tls", "stronghold"], optional = true}
 iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", optional = true}
 
-reqwest = {version = "0.11.11", optional = true, default-features = false, features = ["json", "rustls-tls"]}
+reqwest = {version = "0.12.4", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
 serde-big-array = { version = "0.4", default-features = false}
 serde_json = {version = "1.0.81", default-features = false}
 spin = {version = "0.9.2", default-features = false, features = ["mutex", "spin_mutex"], optional = true}
 rayon = {version = "1.5.3", default-features = false, optional = true}
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "mysql", "macros", "chrono"], optional = true}
+sqlx = { version = "0.7.4", features = ["runtime-tokio-native-tls", "mysql", "macros", "chrono"], optional = true}
 chrono = {version = "0.4.23", features = ["serde"]}
 
 # Error
@@ -68,7 +68,7 @@ thiserror-no-std = {version = "2.0.2", default-features = false}
 
 [dev-dependencies]
 chrono = {version = "0.4.19", default-features = false, features = ["clock"]}
-criterion = {version = "0.3.5", features = ["async_tokio", "html_reports"]}
+criterion = {version = "0.5.1", features = ["async_tokio", "html_reports"]}
 tokio = {version = "1.19.2", default-features = false, features = ["macros"]}
 spin = {version = "0.9.2", default-features = false, features = ["mutex", "spin_mutex"]}
 

@@ -114,15 +114,12 @@ impl<SM, DM> Client<SM, DM> {
     async fn retrieve_message(&mut self, address: Address) -> Result<SqlMessage> {
         let app_id_bytes = address.base().as_bytes().to_vec();
         let msg_id_bytes = address.relative().as_bytes().to_vec();
-        let sql_message: SqlMessage = sqlx::query_as!(
-            SqlMessage,
-            r#"SELECT * FROM sql_messages WHERE msg_id = ? AND app_id = ?"#,
-            msg_id_bytes,
-            app_id_bytes
-        )
-        .fetch_one(&self.0)
-        .await
-        .map_err(|e| Error::MySqlClient("fetching message", e))?;
+        let sql_message: SqlMessage = sqlx::query_as("SELECT * FROM sql_messages WHERE msg_id = ? AND app_id = ?")
+            .bind(msg_id_bytes)
+            .bind(app_id_bytes)
+            .fetch_one(&self.0)
+            .await
+            .map_err(|e| Error::MySqlClient("fetching message", e))?;
 
         self.verify_sql_msg(&sql_message)?;
 
