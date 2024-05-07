@@ -12,8 +12,8 @@ use rand::Rng;
 use streams::transport::bucket;
 use streams::{transport::Transport, Result, TransportMessage};
 
-#[cfg(feature = "tangle-client")]
-use streams::transport::tangle;
+//#[cfg(feature = "tangle-client")]
+//use streams::transport::tangle;
 
 #[cfg(feature = "utangle-client")]
 use streams::transport::utangle;

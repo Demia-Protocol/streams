@@ -355,7 +355,7 @@ where
             let mut n_subscribers = Size::default();
             self.absorb(&mut n_subscribers)?;
             unwrap_subscribers(
-                &mut self,
+                self,
                 keyload,
                 n_subscribers,
                 &mut key,
