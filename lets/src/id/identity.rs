@@ -11,7 +11,7 @@ use async_trait::async_trait;
 // IOTA
 use crypto::signatures::ed25519;
 #[cfg(feature = "did")]
-use identity_demia::{did::DID as IdentityDID, demia::DemiaDID};
+use identity_demia::{demia::DemiaDID, did::DID as IdentityDID};
 
 #[cfg(feature = "did")]
 use iota_client::{api::EncryptedData, stronghold::Location};

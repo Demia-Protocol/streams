@@ -48,7 +48,11 @@ pub struct DIDUrlInfo {
 impl Default for DIDUrlInfo {
     fn default() -> Self {
         DIDUrlInfo::new(
-            DemiaDID::new(&[0_u8; 32], &isocountry::CountryCode::USA, &"dflt".try_into().unwrap()),
+            DemiaDID::new(
+                &[0_u8; 32],
+                &isocountry::CountryCode::USA,
+                &"dflt".try_into().unwrap(),
+            ),
             String::new(),
             String::new(),
             String::new(),

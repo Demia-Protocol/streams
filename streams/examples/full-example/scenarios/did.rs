@@ -361,7 +361,9 @@ async fn new_doc(
 
     // Create new alias output and publish it
     let output = did_client.new_did_output(output_address, doc, None).await?;
-    Ok(did_client.publish_did_output(&stronghold, output, &DEFALT_COUNTRY).await?)
+    Ok(did_client
+        .publish_did_output(&stronghold, output, &DEFALT_COUNTRY)
+        .await?)
 }
 
 // Create the Ed25519 and X25519 keys that will be used by the streams user and store them into the

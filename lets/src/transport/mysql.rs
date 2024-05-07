@@ -79,14 +79,14 @@ impl<SM, DM> Client<SM, DM> {
         query.push_values(sql_msgs.iter(), |mut q, sql_msg| {
             q.push_bind(&sql_msg.app_id);
         });
-        let _ = query.build()
-            .execute(&self.0)
-            .await;
+        let _ = query.build().execute(&self.0).await;
 
         // Loop through the messages in chunks of 25
         for chunk in sql_msgs.chunks(25) {
             //TODO: investigate building query with binds to use ON DUPLICATE KEY UPDATE
-            let mut query = QueryBuilder::new(r#"INSERT IGNORE INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#);
+            let mut query = QueryBuilder::new(
+                r#"INSERT IGNORE INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#,
+            );
             query.push_values(chunk.into_iter(), |mut b, msg| {
                 b.push_bind(&msg.msg_id)
                     .push_bind(&msg.raw_content)
@@ -96,7 +96,8 @@ impl<SM, DM> Client<SM, DM> {
                     .push_bind(&msg.app_id);
             });
 
-            query.build()
+            query
+                .build()
                 .execute(&self.0)
                 .await
                 .map_err(|e| Error::MySqlClient("inserting bulk messages", e))
@@ -114,12 +115,13 @@ impl<SM, DM> Client<SM, DM> {
     async fn retrieve_message(&mut self, address: Address) -> Result<SqlMessage> {
         let app_id_bytes = address.base().as_bytes().to_vec();
         let msg_id_bytes = address.relative().as_bytes().to_vec();
-        let sql_message: SqlMessage = sqlx::query_as("SELECT * FROM sql_messages WHERE msg_id = ? AND app_id = ?")
-            .bind(msg_id_bytes)
-            .bind(app_id_bytes)
-            .fetch_one(&self.0)
-            .await
-            .map_err(|e| Error::MySqlClient("fetching message", e))?;
+        let sql_message: SqlMessage =
+            sqlx::query_as("SELECT * FROM sql_messages WHERE msg_id = ? AND app_id = ?")
+                .bind(msg_id_bytes)
+                .bind(app_id_bytes)
+                .fetch_one(&self.0)
+                .await
+                .map_err(|e| Error::MySqlClient("fetching message", e))?;
 
         self.verify_sql_msg(&sql_message)?;
 
@@ -161,18 +163,19 @@ impl<SM, DM> Client<SM, DM> {
     pub async fn retrieve_messages(&mut self, addresses: Vec<Address>) -> Result<Vec<SqlMessage>> {
         let app_id_bytes = addresses[0].base().as_bytes().to_vec();
 
-        let placeholders: String = addresses.iter()
-            .map(|_| "?")
-            .collect::<Vec<_>>()
-            .join(", ");
+        let placeholders: String = addresses.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
 
-        let query_string = format!("SELECT * FROM sql_messages WHERE msg_id IN ({}) AND app_id = ?", placeholders);
+        let query_string = format!(
+            "SELECT * FROM sql_messages WHERE msg_id IN ({}) AND app_id = ?",
+            placeholders
+        );
 
         let mut query = sqlx::query_as::<sqlx::mysql::MySql, SqlMessage>(&query_string);
         for addr in addresses {
             query = query.bind(addr.relative().as_bytes().to_vec());
         }
-        let sql_messages: Vec<SqlMessage> = query.bind(app_id_bytes)
+        let sql_messages: Vec<SqlMessage> = query
+            .bind(app_id_bytes)
             .fetch_all(&self.0)
             .await
             .map_err(|e| Error::MySqlClient("fetching batch messages", e))?
@@ -307,8 +310,8 @@ impl From<SqlMessage> for TransportMessage {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Add;
     use chrono::{Timelike, Utc};
+    use std::ops::Add;
 
     use crate::{
         address::{Address, AppAddr, MsgId},
@@ -386,9 +389,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
 
-        client
-            .insert_messages(&messages)
-            .await?;
+        client.insert_messages(&messages).await?;
         let mut response = client.retrieve_messages(addresses).await?;
 
         response.sort_by(|a, b| a.msg_id.partial_cmp(&b.msg_id).unwrap());
@@ -399,11 +400,20 @@ mod tests {
             assert_eq!(sql_message.msg_id, response[i].msg_id);
             assert_eq!(sql_message.raw_content, response[i].raw_content);
 
-            println!("{}   -   {}", sql_message.timestamp.time(), response[i].timestamp.time());
+            println!(
+                "{}   -   {}",
+                sql_message.timestamp.time(),
+                response[i].timestamp.time()
+            );
             // Timestamp is stored in sql without fractional percentage, so round here
             // TODO: Adjust timestamp on store
             let timestamp = if sql_message.timestamp.time().nanosecond() > 500_000_000 {
-                sql_message.timestamp.time().add(std::time::Duration::from_secs(1)).with_nanosecond(0).unwrap()
+                sql_message
+                    .timestamp
+                    .time()
+                    .add(std::time::Duration::from_secs(1))
+                    .with_nanosecond(0)
+                    .unwrap()
             } else {
                 sql_message.timestamp.time().with_nanosecond(0).unwrap()
             };

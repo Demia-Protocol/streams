@@ -266,9 +266,7 @@ impl<T> User<T> {
 
     /// Returns an iterator over [`CursorStore`], producing tuples of [`Topic`], [`Permissioned`]
     /// [`Identifier`], and the cursor. Used by [`Messages`] streams to find next messages.
-    pub fn cursors(
-        &self,
-    ) -> impl Iterator<Item = (&Topic, &Permissioned<Identifier>, usize)> + '_ {
+    pub fn cursors(&self) -> impl Iterator<Item = (&Topic, &Permissioned<Identifier>, usize)> + '_ {
         self.state.cursor_store.cursors()
     }
 
@@ -502,7 +500,7 @@ where
 
     /**
      * Sets the cursor of the identified user on the branch to the value or INIT_MESSAGE_NUM.
-     * If the identifier has a cursor stored with a different permission, 
+     * If the identifier has a cursor stored with a different permission,
      * removes that permission (preserving the cursor).
      */
     pub(crate) fn update_permissions(
@@ -513,7 +511,9 @@ where
     ) {
         // TODO: set old cursor and update when permisisons get updated to write again
         let cursor = cursor.unwrap_or(INIT_MESSAGE_NUM);
-        self.state.cursor_store.insert_cursor(topic, permission, cursor);
+        self.state
+            .cursor_store
+            .insert_cursor(topic, permission, cursor);
     }
 
     // TODO: Re-evaluate the way we process permissions twice per message
