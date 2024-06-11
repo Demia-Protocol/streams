@@ -89,7 +89,7 @@ where
         // TODO: We'll need to address the potential for duplicates in the future
         if bucket.contains(msg) {
             Err(Error::AddressError("Message already exists", addr));
-        }
+        } else {
             bucket.push(msg.clone());
             Ok(msg)
         }
