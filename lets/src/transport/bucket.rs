@@ -48,7 +48,7 @@ impl<Msg> Default for Client<Msg> {
 #[async_trait]
 impl<Msg> Transport<'_> for Client<Msg>
 where
-    Msg: Clone + Send + Sync,
+    Msg: Clone + Send + Sync + PartialEq,
 {
     type Msg = Msg;
     type SendResponse = Msg;
@@ -81,16 +81,14 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        let bucket = self.bucket
-            .lock()
-            .entry(addr)
-            .or_default();
+        let mut bucket = self.bucket.lock();
+        let entry = bucket.entry(addr).or_default();
         // Only store if the bucket does not contain the message already
         // TODO: We'll need to address the potential for duplicates in the future
-        if bucket.contains(msg) {
-            Err(Error::AddressError("Message already exists", addr));
+        if entry.contains(&msg) {
+            Err(Error::AddressError("Message already exists", addr))
         } else {
-            bucket.push(msg.clone());
+            entry.push(msg.clone());
             Ok(msg)
         }
     }
