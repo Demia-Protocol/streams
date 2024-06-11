@@ -81,12 +81,18 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        self.bucket
+        let bucket = self.bucket
             .lock()
             .entry(addr)
-            .or_default()
-            .push(msg.clone());
-        Ok(msg)
+            .or_default();
+        // Only store if the bucket does not contain the message already
+        // TODO: We'll need to address the potential for duplicates in the future
+        if bucket.contains(msg) {
+            Err(Error::AddressError("Message already exists", addr));
+        }
+            bucket.push(msg.clone());
+            Ok(msg)
+        }
     }
 
     /// Returns a vector of messages from the bucket, or an error if the bucket doesn't contain the

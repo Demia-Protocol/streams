@@ -47,10 +47,14 @@ pub trait Transport<'a> {
     /// Receive a single message
     async fn recv_message(&mut self, address: Address) -> Result<Self::Msg> {
         let mut msgs = self.recv_messages(address).await?;
-        // Sort messages by timestamp and pop the most recent one
-        // TODO: We need to explore the ramifications of this approach
-        msgs.sort_by(|a, b| a.timestamp().cmp(&b.timestamp()));
-        msgs.pop().ok_or(Error::AddressError("not found in transport", address))
+        if let Some(msg) = msgs.pop() {
+            match msgs.is_empty() {
+                true => Ok(msg),
+                false => Err(Error::AddressError("More than one found", address)),
+            }
+        } else {
+            Err(Error::AddressError("not found in transport", address))
+        }
     }
 
     async fn latest_timestamp(&self) -> Result<u128>;
