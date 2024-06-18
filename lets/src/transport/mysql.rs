@@ -85,7 +85,7 @@ impl<SM, DM> Client<SM, DM> {
         for chunk in sql_msgs.chunks(25) {
             //TODO: investigate building query with binds to use ON DUPLICATE KEY UPDATE
             let mut query = QueryBuilder::new(
-                r#"INSERT IGNORE INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#,
+                r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#,
             );
             query.push_values(chunk.into_iter(), |mut b, msg| {
                 b.push_bind(&msg.msg_id)
@@ -95,6 +95,15 @@ impl<SM, DM> Client<SM, DM> {
                     .push_bind(&msg.signature)
                     .push_bind(&msg.app_id);
             });
+            query.push(
+                r#" ON DUPLICATE KEY UPDATE
+                    msg_id = VALUES(msg_id),
+                    raw_content = VALUES(raw_content),
+                    timestamp = VALUES(timestamp),
+                    public_key = VALUES(public_key),
+                    signature = VALUES(signature),
+                    app_id = VALUES(app_id)"#
+            );
 
             query
                 .build()
