@@ -79,7 +79,17 @@ impl<SM, DM> Client<SM, DM> {
         query.push_values(sql_msgs.iter(), |mut q, sql_msg| {
             q.push_bind(&sql_msg.app_id);
         });
-        let _ = query.build().execute(&self.0).await;
+        let app_result = query.build().execute(&self.0).await;
+
+        if let Err(e) = app_result {
+            if let sqlx::Error::Database(db_error) = &e {
+                if !db_error.message().contains("Duplicate entry") { // Duplicate entry error code for MySQL
+                    return Err(Error::MySqlClient("inserting app id", e));
+                }
+            } else {
+                return Err(Error::MySqlClient("inserting app id", e));
+            }
+        };
 
         // Loop through the messages in chunks of 25
         for chunk in sql_msgs.chunks(25) {
