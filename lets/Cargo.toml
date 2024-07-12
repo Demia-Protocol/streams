@@ -48,11 +48,11 @@ prefix-hex = "0.7.0"
 
 # Optional dependencies
 futures = {version = "0.3.8", default-features = false, optional = true}
-identity_demia = { git = "https://github.com/demia-protocol/demia-sdk", default-features = true, optional = true}
+identity_demia = { git = "https://github.com/demia-protocol/demia-sdk", branch="demia-retriever", default-features = true, optional = true}
 isocountry = { version = "0.3", optional = true }
 
-iota-client = { git = "https://github.com/demia-protocol/demia-sdk", features = ["tls", "stronghold"], optional = true}
-iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", optional = true}
+iota-client = { git = "https://github.com/demia-protocol/demia-sdk", branch="demia-retriever", features = ["tls", "stronghold"], optional = true}
+iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", branch="demia-retriever", optional = true}
 
 reqwest = {version = "0.12.4", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
