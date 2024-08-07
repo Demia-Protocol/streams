@@ -6,7 +6,7 @@ use identity_demia::{
     demia::{DemiaDID, IotaDocument, IotaIdentityClientExt},
     verification::VerificationMethod,
 };
-use iota_client::Client as DIDClient;
+use iota_client::client::Client as DIDClient;
 
 // Streams
 use spongos::{
@@ -34,7 +34,7 @@ pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<IotaDocume
         .with_primary_node(url_info.client_url(), None)
         .map_err(|e| Error::did("DIDClient set primary node", e))?
         .finish()
-        .map_err(|e| Error::did("build DID Client", e))?;
+        .await.map_err(|e| Error::did("build DID Client", e))?;
     let doc = client
         .resolve_did(&did_url)
         .await
@@ -146,8 +146,9 @@ impl DIDInfo {
     }
 }
 
+/*
 /// Wrapper for a `DID` based KeyPair
-struct KeyPair(identity_demia::crypto::KeyPair);
+struct KeyPair(identity_demia::crypto::Jwk);
 
 impl PartialEq for KeyPair {
     fn eq(&self, other: &Self) -> bool {
@@ -176,3 +177,4 @@ impl Hash for KeyPair {
         self.0.private().as_ref().hash(state);
     }
 }
+ */
