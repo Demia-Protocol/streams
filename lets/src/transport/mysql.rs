@@ -45,39 +45,10 @@ impl<SM, DM> Client<SM, DM> {
 }
 
 impl<SM, DM> Client<SM, DM> {
-    async fn insert_message(&mut self, sql_msg: SqlMessage) -> Result<()> {
-        // TODO: check sql error code to confirm it's just a 23000 (already stored) error
-        let _ = sqlx::query!(r#"INSERT INTO app (app_id) VALUES (?)"#, sql_msg.app_id,)
-            .execute(&self.0)
-            .await;
-
-        Ok(sqlx::query!(
-            r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) VALUES (?, ?, ?, ?, ?, ?)"#,
-            sql_msg.msg_id,
-            sql_msg.raw_content,
-            sql_msg.timestamp,
-            sql_msg.public_key,
-            sql_msg.signature,
-            sql_msg.app_id,
-        )
-        .execute(&self.0)
-        .await
-        .map_err(|e| Error::MySqlClient("inserting message", e))
-        .and_then(|r| {
-            if r.rows_affected() == 0 {
-                Err(Error::MySqlNotInserted)
-            } else {
-                Ok(())
-            }
-        })?)
-    }
-
-    // Sending multiple messages simultaneously. Messages are processed in chunks of 25
-    pub async fn insert_messages(&mut self, sql_msgs: &[SqlMessage]) -> Result<()> {
-        // TODO: check sql error code to confirm it's just a 23000 (already stored) error
+    async fn insert_app_id(&mut self, app_id: &[u8]) -> Result<()> {
         let mut query = QueryBuilder::new(r#"INSERT INTO app (app_id) "#);
-        query.push_values(sql_msgs.iter(), |mut q, sql_msg| {
-            q.push_bind(&sql_msg.app_id);
+        query.push_values(std::iter::once(app_id), |mut q, app_id| {
+            q.push_bind(app_id);
         });
         let app_result = query.build().execute(&self.0).await;
 
@@ -89,7 +60,51 @@ impl<SM, DM> Client<SM, DM> {
             } else {
                 return Err(Error::MySqlClient("inserting app id", e));
             }
-        };
+        }
+
+        Ok(())
+    }
+
+    async fn insert_message(&mut self, sql_msg: SqlMessage) -> Result<()> {
+        self.insert_app_id(&sql_msg.app_id).await?;
+
+        let mut query = QueryBuilder::new(
+            r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#,
+        );
+        query.push_values(std::iter::once(&sql_msg), |mut query, sql_msg| {
+            query.push_bind(&sql_msg.msg_id)
+                .push_bind(&sql_msg.raw_content)
+                .push_bind(&sql_msg.timestamp)
+                .push_bind(&sql_msg.public_key)
+                .push_bind(&sql_msg.signature)
+                .push_bind(&sql_msg.app_id);
+        });
+        query.push(
+            r#" ON DUPLICATE KEY UPDATE
+                    msg_id = VALUES(msg_id),
+                    raw_content = VALUES(raw_content),
+                    timestamp = VALUES(timestamp),
+                    public_key = VALUES(public_key),
+                    signature = VALUES(signature),
+                    app_id = VALUES(app_id)"#
+        );
+
+        Ok(query
+            .build()
+            .execute(&self.0)
+            .await.map_err(|e| Error::MySqlClient("inserting message", e))
+            .and_then(|r| {
+                if r.rows_affected() == 0 {
+                    Err(Error::MySqlNotInserted)
+                } else {
+                    Ok(())
+                }
+            })?)
+    }
+
+    // Sending multiple messages simultaneously. Messages are processed in chunks of 25
+    pub async fn insert_messages(&mut self, sql_msgs: &[SqlMessage]) -> Result<()> {
+        self.insert_app_id(&sql_msgs[0].app_id).await?;
 
         // Loop through the messages in chunks of 25
         for chunk in sql_msgs.chunks(25) {
