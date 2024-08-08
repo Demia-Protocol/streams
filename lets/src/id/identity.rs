@@ -14,7 +14,7 @@ use crypto::signatures::ed25519;
 use iota_stronghold::Location;
 #[cfg(feature = "did")]
 use identity_demia::{demia::DemiaDID, did::DID as IdentityDID};
-use iota_client::demia::EncryptedData;
+use iota_sdk::demia::EncryptedData;
 
 // IOTA-Streams
 use spongos::ddml::commands::{Ed25519 as Ed25519Command, X25519};

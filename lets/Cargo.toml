@@ -17,15 +17,15 @@ version = "0.2.1"
 default = ["utangle-client", "serde"]
 std = ["spongos/std"]
 # Enable the IOTA-Tangle transport client (implies `std` features)
-tangle-client = ["iota-client", "futures", "serde", "iota-crypto/blake2b"]
-# Enable the wasm-compatible IOTA-Tangle transport client (incompatile with `tangle-client` feature due to `iota-client/async` using `tokio`. Implies `std` feature)
-tangle-client-wasm = ["iota-client", "futures"]
+tangle-client = ["iota-sdk", "futures", "serde", "iota-crypto/blake2b"]
+# Enable the wasm-compatible IOTA-Tangle transport client (incompatile with `tangle-client` feature due to `iota-sdk/async` using `tokio`. Implies `std` feature)
+tangle-client-wasm = ["iota-sdk", "futures"]
 # Enable the Streams-specific uTangle Client
 utangle-client = ["reqwest", "serde", "rayon", "iota-crypto/curl-p"]
 # Enable bucket transport Client
 bucket = ["spin"]
 # Enable Iota Identity for use with Streams
-did = ["identity_demia", "isocountry", "iota-client", "serde", "iota_stronghold", "iota-crypto/x25519-dalek", "hkdf"]
+did = ["identity_demia", "isocountry", "iota-sdk", "serde", "iota_stronghold", "iota-crypto/x25519-dalek", "hkdf"]
 # Enable client for mysql,
 mysql-client = ["sqlx", "std"]
 # Error and serialization
@@ -51,8 +51,7 @@ futures = {version = "0.3.8", default-features = false, optional = true}
 identity_demia = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", default-features = true, optional = true}
 isocountry = { version = "0.3", optional = true }
 
-iota-client = { package = "iota-sdk", git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", features = ["tls", "stronghold"], optional = true }
-# iota-client = { git = "https://github.com/demia-protocol/demia-sdk", branch="demia-retriever", features = ["tls", "stronghold"], optional = true}
+iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", features = ["tls", "stronghold"], optional = true }
 iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", optional = true}
 
 reqwest = {version = "0.12.4", optional = true, default-features = false, features = ["json", "rustls-tls"]}

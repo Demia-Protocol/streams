@@ -6,7 +6,7 @@ use identity_demia::{
     demia::{DemiaDID, IotaDocument, IotaIdentityClientExt},
     verification::VerificationMethod,
 };
-use iota_client::client::Client as DIDClient;
+use iota_sdk::client::Client as DIDClient;
 
 // Streams
 use spongos::{

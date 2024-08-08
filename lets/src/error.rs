@@ -28,7 +28,7 @@ pub enum IdentityError {
     #[error("{0}")]
     Verification(identity_demia::verification::Error),
     #[error("{0}")]
-    IotaClient(iota_client::client::Error),
+    IotaClient(iota_sdk::client::Error),
     #[error("{0}")]
     Iota(identity_demia::demia::Error),
     #[error("{0}")]
@@ -73,8 +73,8 @@ impl From<identity_demia::demia::Error> for IdentityError {
 }
 
 #[cfg(feature = "did")]
-impl From<iota_client::client::Error> for IdentityError {
-    fn from(error: iota_client::client::Error) -> Self {
+impl From<iota_sdk::client::Error> for IdentityError {
+    fn from(error: iota_sdk::client::Error) -> Self {
         Self::IotaClient(error)
     }
 }
@@ -122,7 +122,7 @@ pub enum Error {
 
     #[cfg(any(feature = "tangle-client", feature = "tangle-client-wasm"))]
     #[error("Iota client error for {0}: {1}")]
-    IotaClient(&'static str, iota_client::client::Error),
+    IotaClient(&'static str, iota_sdk::client::Error),
 
     #[cfg(feature = "mysql-client")]
     #[error("MySql client error for {0}: {1}")]

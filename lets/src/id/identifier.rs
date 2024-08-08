@@ -410,7 +410,7 @@ where
                         let sender_location =
                             Location::generic(STREAMS_VAULT, sender_method.id().to_string());
                         // Get public key for encryption
-                        let xkey = iota_client::crypto::keys::x25519::PublicKey::try_from_slice(
+                        let xkey = iota_sdk::crypto::keys::x25519::PublicKey::try_from_slice(
                             &receiver_method.data().try_decode().map_err(|e| {
                                 SpongosError::Context("ContentEncrypt try_decode", e.to_string())
                             })?,

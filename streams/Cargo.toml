@@ -23,7 +23,7 @@ utangle-client = ["lets/utangle-client"]
 tangle-client = ["lets/tangle-client"]
 # Re-export spin for bucket transport client from LETS
 bucket = ["lets/bucket"]
-# Enable re-export of wasm-compatible IOTA-Tangle transport client from LETS (incompatile with `tangle-client` feature due to `iota-client/async` using `tokio`)
+# Enable re-export of wasm-compatible IOTA-Tangle transport client from LETS (incompatile with `tangle-client` feature due to `iota-sdk/async` using `tokio`)
 tangle-client-wasm = ["lets/tangle-client-wasm"]
 # Enable MySql Client
 mysql-client = ["lets/mysql-client"]
@@ -57,7 +57,7 @@ hex = {version = "0.4.3", default-features = false}
 identity_demia = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", features = ["iota-client"]}
 iota_stronghold = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk"}
 isocountry = { version = "0.3" }
-iota-client = { package = "iota-sdk", git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", features = ["tls", "stronghold"] }
+iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", branch="iota-sdk", features = ["tls", "stronghold"] }
 rand = {version = "0.8.5", default-features = false, features = ["std", "std_rng"]}
 lets = {path = "../lets", features = ["tangle-client"]}
 textwrap = {version = "0.15.0", default-features = false}

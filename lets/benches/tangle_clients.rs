@@ -8,7 +8,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Through
 use serde::Deserialize;
 
 // IOTA
-use iota_client::bee_message::Message;
+use iota_sdk::bee_message::Message;
 
 // Streams
 use lets::{
@@ -29,7 +29,7 @@ where
         AppAddr::default(),
         MsgId::gen(
             AppAddr::default(),
-            Identifier::default(),
+            &Identifier::default(),
             &Topic::default(),
             Utc::now().timestamp_millis() as usize,
         ),

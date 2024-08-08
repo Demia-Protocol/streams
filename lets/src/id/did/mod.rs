@@ -16,4 +16,4 @@ pub const STREAMS_VAULT: &[u8] = b"streams-secrets-vault";
 pub const DID_ENCRYPTED_DATA_SIZE: usize = 92;
 
 // 3rd party
-pub use iota_client::client::secret::stronghold::StrongholdSecretManager;
+pub use iota_sdk::client::secret::stronghold::StrongholdSecretManager;

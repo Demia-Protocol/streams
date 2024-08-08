@@ -12,7 +12,7 @@ use identity_demia::{
     }, did::DID as IdentityDID, verification::{MethodData, MethodScope, MethodType, VerificationMethod}
 };
 
-use iota_client::{
+use iota_sdk::{
     client::{api::GetAddressesOptions, node_api::indexer::query_parameters::QueryParameter, secret::SecretManager, Client as DIDClient}, crypto::keys::bip39, types::block::{address::ToBech32Ext, output::Output}
 };
 
@@ -333,7 +333,7 @@ async fn request_faucet_funds(
         ).await?;
     let b32_address = addresses[0];
     println!("Requesting funds for {}", b32_address);
-    iota_client::client::request_funds_from_faucet(FAUCET, &b32_address).await?;
+    iota_sdk::client::request_funds_from_faucet(FAUCET, &b32_address).await?;
 
     println!("Waiting 10 seconds for deposit to enact");
     tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;

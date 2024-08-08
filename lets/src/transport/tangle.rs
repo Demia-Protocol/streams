@@ -13,7 +13,7 @@ use futures::{
 };
 
 // IOTA
-use iota_client::bee_message::{payload::Payload, Message as IotaMessage};
+use iota_sdk::bee_message::{payload::Payload, Message as IotaMessage};
 
 // Streams
 
@@ -29,13 +29,13 @@ use crate::{
 /// This Client uses the [iota.rs](https://github.com/iotaledger/iota.rs) Client implementation.
 #[derive(Debug)]
 pub struct Client<Message = TransportMessage, SendResponse = TransportMessage>(
-    iota_client::Client,
+    iota_sdk::Client,
     PhantomData<(Message, SendResponse)>,
 );
 
 impl<Message, SendResponse> Client<Message, SendResponse> {
     /// Create an instance of [`Client`] with an  explicit client
-    pub fn new(client: iota_client::Client) -> Self {
+    pub fn new(client: iota_sdk::Client) -> Self {
         Self(client, PhantomData)
     }
 
@@ -45,7 +45,7 @@ impl<Message, SendResponse> Client<Message, SendResponse> {
     /// * `node_url`: URL endpoint for node operations
     pub async fn for_node(node_url: &str) -> Result<Client<Message, SendResponse>> {
         Ok(Self(
-            iota_client::ClientBuilder::new()
+            iota_sdk::ClientBuilder::new()
                 .with_node(node_url)
                 .map_err(|e| Error::IotaClient("building client", e))?
                 .with_local_pow(true)
@@ -56,20 +56,20 @@ impl<Message, SendResponse> Client<Message, SendResponse> {
         ))
     }
 
-    /// Returns a reference to the `IOTA` [Client](`iota_client::Client`)
-    pub fn client(&self) -> &iota_client::Client {
+    /// Returns a reference to the `IOTA` [Client](`iota_sdk::Client`)
+    pub fn client(&self) -> &iota_sdk::Client {
         &self.0
     }
 
-    /// Returns a mutable reference to the `IOTA` [Client](`iota_client::Client`)
-    pub fn client_mut(&mut self) -> &mut iota_client::Client {
+    /// Returns a mutable reference to the `IOTA` [Client](`iota_sdk::Client`)
+    pub fn client_mut(&mut self) -> &mut iota_sdk::Client {
         &mut self.0
     }
 }
 
 impl<Message, SendResponse> Clone for Client<Message, SendResponse> {
     fn clone(&self) -> Self {
-        async fn copy_client<M, S>(client: &iota_client::Client) -> Client<M, S> {
+        async fn copy_client<M, S>(client: &iota_sdk::Client) -> Client<M, S> {
             let url = client.get_node().await.unwrap().url.to_string();
             Client::for_node(&url).await.unwrap()
         }
