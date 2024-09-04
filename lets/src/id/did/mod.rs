@@ -2,9 +2,8 @@
 mod did;
 /// Details required for `DID` resolution
 mod url_info;
-/// 
+///
 //mod keypair;
-
 pub use did::{DIDInfo, DID};
 pub use url_info::DIDUrlInfo;
 //pub use keypair::{KeyPair};

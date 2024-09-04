@@ -54,7 +54,8 @@ impl<SM, DM> Client<SM, DM> {
 
         if let Err(e) = app_result {
             if let sqlx::Error::Database(db_error) = &e {
-                if !db_error.message().contains("Duplicate entry") { // Duplicate entry error code for MySQL
+                if !db_error.message().contains("Duplicate entry") {
+                    // Duplicate entry error code for MySQL
                     return Err(Error::MySqlClient("inserting app id", e));
                 }
             } else {
@@ -72,7 +73,8 @@ impl<SM, DM> Client<SM, DM> {
             r#"INSERT INTO sql_messages (msg_id, raw_content, timestamp, public_key, signature, app_id) "#,
         );
         query.push_values(std::iter::once(&sql_msg), |mut query, sql_msg| {
-            query.push_bind(&sql_msg.msg_id)
+            query
+                .push_bind(&sql_msg.msg_id)
                 .push_bind(&sql_msg.raw_content)
                 .push_bind(&sql_msg.timestamp)
                 .push_bind(&sql_msg.public_key)
@@ -86,13 +88,14 @@ impl<SM, DM> Client<SM, DM> {
                     timestamp = VALUES(timestamp),
                     public_key = VALUES(public_key),
                     signature = VALUES(signature),
-                    app_id = VALUES(app_id)"#
+                    app_id = VALUES(app_id)"#,
         );
 
         Ok(query
             .build()
             .execute(&self.0)
-            .await.map_err(|e| Error::MySqlClient("inserting message", e))
+            .await
+            .map_err(|e| Error::MySqlClient("inserting message", e))
             .and_then(|r| {
                 if r.rows_affected() == 0 {
                     Err(Error::MySqlNotInserted)
@@ -127,7 +130,7 @@ impl<SM, DM> Client<SM, DM> {
                     timestamp = VALUES(timestamp),
                     public_key = VALUES(public_key),
                     signature = VALUES(signature),
-                    app_id = VALUES(app_id)"#
+                    app_id = VALUES(app_id)"#,
             );
 
             query

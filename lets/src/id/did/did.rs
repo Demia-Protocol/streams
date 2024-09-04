@@ -34,7 +34,8 @@ pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<IotaDocume
         .with_primary_node(url_info.client_url(), None)
         .map_err(|e| Error::did("DIDClient set primary node", e))?
         .finish()
-        .await.map_err(|e| Error::did("build DID Client", e))?;
+        .await
+        .map_err(|e| Error::did("build DID Client", e))?;
     let doc = client
         .resolve_did(&did_url)
         .await

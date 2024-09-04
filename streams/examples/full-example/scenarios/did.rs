@@ -9,11 +9,18 @@ use identity_demia::{
     demia::{
         block::{address::Address, output::AliasOutputBuilder},
         IotaClientExt, IotaDocument, IotaIdentityClientExt, NetworkName,
-    }, did::DID as IdentityDID, verification::{MethodData, MethodScope, MethodType, VerificationMethod}
+    },
+    did::DID as IdentityDID,
+    verification::{MethodData, MethodScope, MethodType, VerificationMethod},
 };
 
 use iota_sdk::{
-    client::{api::GetAddressesOptions, node_api::indexer::query_parameters::QueryParameter, secret::SecretManager, Client as DIDClient}, crypto::keys::bip39, types::block::{address::ToBech32Ext, output::Output}
+    client::{
+        api::GetAddressesOptions, node_api::indexer::query_parameters::QueryParameter,
+        secret::SecretManager, Client as DIDClient,
+    },
+    crypto::keys::bip39,
+    types::block::{address::ToBech32Ext, output::Output},
 };
 
 use iota_stronghold::types::Location;
@@ -230,9 +237,8 @@ async fn make_did_info(
     let secret: SecretKey = SecretKey::generate().unwrap();
     let public: PublicKey = secret.public_key();
 
-    let mnemonic =
-        bip39::wordlist::encode(secret.as_slice(), &bip39::wordlist::ENGLISH)
-            .map_err(|err| anyhow!(format!("{err:?}")))?;
+    let mnemonic = bip39::wordlist::encode(secret.as_slice(), &bip39::wordlist::ENGLISH)
+        .map_err(|err| anyhow!(format!("{err:?}")))?;
     adapter
         .store_mnemonic(mnemonic)
         .await
@@ -328,9 +334,11 @@ async fn request_faucet_funds(
     // Fetch addresseses from the stronghold adapter for faucet funds
     let addresses = stronghold
         .generate_ed25519_addresses(
-            GetAddressesOptions::from_client(did_client).await?
-                .with_range(0..1)
-        ).await?;
+            GetAddressesOptions::from_client(did_client)
+                .await?
+                .with_range(0..1),
+        )
+        .await?;
     let b32_address = addresses[0];
     println!("Requesting funds for {}", b32_address);
     iota_sdk::client::request_funds_from_faucet(FAUCET, &b32_address).await?;
@@ -351,16 +359,18 @@ async fn new_doc(
     // Create a new document with a base method
     let network_name: NetworkName = did_client.get_network_name().await?.try_into()?;
     let mut doc = IotaDocument::new(&DEFALT_COUNTRY, &network_name);
-    
+
     // let jwk: Jwk = encode_public_ed25519_jwk(&doc_public);
     // let _method = VerificationMethod::new_from_jwk(doc.id().clone(), jwk, Some(&doc_signing_fragment)).map_err(|e| anyhow!(e.to_string()))?;
 
     let method = VerificationMethod::builder(Default::default())
-                .id(doc.id().to_url().join(doc_signing_fragment)?)
-                .controller(doc.id().to_url().did().clone())
-                .type_(MethodType::ED25519_VERIFICATION_KEY_2018)
-                .data(MethodData::PublicKeyMultibase(BaseEncoding::encode_multibase(doc_public.as_slice(), None)))
-                .build()?;
+        .id(doc.id().to_url().join(doc_signing_fragment)?)
+        .controller(doc.id().to_url().did().clone())
+        .type_(MethodType::ED25519_VERIFICATION_KEY_2018)
+        .data(MethodData::PublicKeyMultibase(
+            BaseEncoding::encode_multibase(doc_public.as_slice(), None),
+        ))
+        .build()?;
 
     doc.insert_method(method, MethodScope::VerificationMethod)?;
 
@@ -401,14 +411,18 @@ async fn generate_streams_keys(
                 .id(doc.id().to_url().join(signing_fragment)?)
                 .controller(doc.id().to_url().did().clone())
                 .type_(MethodType::ED25519_VERIFICATION_KEY_2018)
-                .data(MethodData::PublicKeyMultibase(BaseEncoding::encode_multibase(&signing_private.public_key(), None)))
+                .data(MethodData::PublicKeyMultibase(
+                    BaseEncoding::encode_multibase(&signing_private.public_key(), None),
+                ))
                 .build()?;
 
             let exchange_method = VerificationMethod::builder(Default::default())
                 .id(doc.id().to_url().join(exchange_fragment)?)
                 .controller(doc.id().to_url().did().clone())
                 .type_(MethodType::X25519_KEY_AGREEMENT_KEY_2019)
-                .data(MethodData::PublicKeyMultibase(BaseEncoding::encode_multibase(&exchange_private.public_key(), None)))
+                .data(MethodData::PublicKeyMultibase(
+                    BaseEncoding::encode_multibase(&exchange_private.public_key(), None),
+                ))
                 .build()?;
 
             let signing_key_location =
@@ -417,7 +431,10 @@ async fn generate_streams_keys(
                 Location::generic(STREAMS_VAULT, exchange_method.id().to_string());
 
             // Store new methods in vault
-            vault.write_secret(signing_key_location, signing_private.as_slice().to_vec().into())?;
+            vault.write_secret(
+                signing_key_location,
+                signing_private.as_slice().to_vec().into(),
+            )?;
             vault.write_secret(
                 exchange_key_location,
                 exchange_private.to_bytes().to_vec().into(),
@@ -432,12 +449,10 @@ async fn generate_streams_keys(
     }
 }
 
-
-
 use crypto::signatures::ed25519::PublicKey;
 use crypto::signatures::ed25519::SecretKey;
-use identity_demia::core::Object;
 use identity_demia::core::BaseEncoding;
+use identity_demia::core::Object;
 use identity_demia::did::CoreDID;
 use identity_demia::document::CoreDocument;
 use identity_demia::verification::jwk::EdCurve;
@@ -454,20 +469,23 @@ pub(crate) fn encode_public_ed25519_jwk(public_key: &PublicKey) -> Jwk {
     let mut jwk = Jwk::from_params(params);
     jwk.set_alg(JwsAlgorithm::EdDSA.name());
     jwk
-  }
-  
-  pub(crate) fn generate_jwk_document_with_keys() -> (CoreDocument, SecretKey, String) {
+}
+
+pub(crate) fn generate_jwk_document_with_keys() -> (CoreDocument, SecretKey, String) {
     let secret: SecretKey = SecretKey::generate().unwrap();
     let public: PublicKey = secret.public_key();
     let jwk: Jwk = encode_public_ed25519_jwk(&public);
-  
-    let did: CoreDID = CoreDID::parse(format!("did:example:{}", BaseEncoding::encode_base58(&public))).unwrap();
+
+    let did: CoreDID = CoreDID::parse(format!(
+        "did:example:{}",
+        BaseEncoding::encode_base58(&public)
+    ))
+    .unwrap();
     let fragment: String = "#jwk".to_owned();
     let document: CoreDocument = CoreDocument::builder(Object::new())
-      .id(did.clone())
-      .verification_method(VerificationMethod::new_from_jwk(did, jwk, Some(&fragment)).unwrap())
-      .build()
-      .unwrap();
+        .id(did.clone())
+        .verification_method(VerificationMethod::new_from_jwk(did, jwk, Some(&fragment)).unwrap())
+        .build()
+        .unwrap();
     (document, secret, fragment)
-  }
-  
+}

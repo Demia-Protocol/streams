@@ -11,10 +11,10 @@ use async_trait::async_trait;
 // IOTA
 use crypto::signatures::ed25519;
 #[cfg(feature = "did")]
-use iota_stronghold::Location;
-#[cfg(feature = "did")]
 use identity_demia::{demia::DemiaDID, did::DID as IdentityDID};
 use iota_sdk::demia::EncryptedData;
+#[cfg(feature = "did")]
+use iota_stronghold::Location;
 
 // IOTA-Streams
 use spongos::ddml::commands::{Ed25519 as Ed25519Command, X25519};
