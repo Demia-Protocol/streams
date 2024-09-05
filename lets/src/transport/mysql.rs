@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use serde::__private::PhantomData;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPool;
-use sqlx::{Execute, QueryBuilder};
+use sqlx::QueryBuilder;
 
 /// -- Create the 'app' table
 /// CREATE TABLE IF NOT EXISTS app (
