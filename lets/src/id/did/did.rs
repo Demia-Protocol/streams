@@ -3,7 +3,7 @@ use core::hash::Hash;
 
 // IOTA
 use identity_demia::{
-    demia::{DemiaDID, IotaDocument, IotaIdentityClientExt},
+    demia::{DemiaDID, DemiaDocument, IotaIdentityClientExt},
     verification::VerificationMethod,
 };
 use iota_sdk::client::Client as DIDClient;
@@ -28,7 +28,7 @@ use crate::{
 ///
 /// # Arguments
 /// * `url_info`: The document details
-pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<IotaDocument> {
+pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<DemiaDocument> {
     let did_url = DemiaDID::parse(url_info.did()).map_err(|e| Error::did("parse did url", e))?;
     let client = DIDClient::builder()
         .with_primary_node(url_info.client_url(), None)
