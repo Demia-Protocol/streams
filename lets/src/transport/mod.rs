@@ -48,10 +48,12 @@ pub trait Transport<'a> {
     async fn recv_message(&mut self, address: Address) -> Result<Self::Msg> {
         let mut msgs = self.recv_messages(address).await?;
         if let Some(msg) = msgs.pop() {
-            match msgs.is_empty() {
-                true => Ok(msg),
-                false => Err(Error::AddressError("More than one found", address)),
-            }
+            //Todo: Sorting/filtering, popping and erroring out on doubles breaks functionality
+            //match msgs.is_empty() {
+            //    true => Ok(msg),
+            //    false => Err(Error::AddressError("More than one found", address)),
+            //}
+            Ok(msg)
         } else {
             Err(Error::AddressError("not found in transport", address))
         }
