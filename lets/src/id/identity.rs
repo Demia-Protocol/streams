@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use crypto::signatures::ed25519;
 #[cfg(feature = "did")]
 use identity_demia::{demia::DemiaDID, did::DID as IdentityDID};
+#[cfg(feature = "did")]
 use iota_sdk::demia::EncryptedData;
 #[cfg(feature = "did")]
 use iota_stronghold::Location;
