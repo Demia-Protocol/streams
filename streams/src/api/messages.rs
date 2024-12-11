@@ -4,7 +4,6 @@ use core::{future::Future, pin::Pin};
 
 // 3rd-party
 use anyhow::Result;
-use async_recursion::async_recursion;
 use futures::{
     future,
     task::{Context, Poll},
@@ -157,110 +156,129 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
     /// Fetch the next message of the channel
     ///
     /// See [`Messages`] documentation and examples for more details.
-    #[async_recursion]
     async fn next(&mut self) -> Option<Result<Message>>
     where
         T: for<'b> Transport<'b, Msg = TransportMessage>,
     {
-        if let Some((relative_address, binary_msg)) = self.stage.pop_front() {
-            // Drain stage if not empty...
-            let address = Address::new(self.user.stream_address()?.base(), relative_address);
+        loop {
+            if let Some((relative_address, binary_msg)) = self.stage.pop_front() {
+                // Drain stage if not empty...
+                let address = Address::new(self.user.stream_address()?.base(), relative_address);
+                let handled = self.process_message(address, relative_address, binary_msg).await;
 
-            let handled = match self.cache.remove(&relative_address) {
-                Some(msg) => Some(msg),
-                None => {
-                    let msg = self.user.handle_message(address, binary_msg).await;
-                    match msg {
-                        Ok(m) => {
-                            self.cache.insert(relative_address, m.clone());
-                            Some(m)
+                match handled {
+                    Some(Message {
+                             header:
+                             HDF {
+                                 linked_msg_address: Some(linked_msg_address),
+                                 ..
+                             },
+                             content:
+                             MessageContent::Orphan(Orphan {
+                                                        // Currently ignoring cursor, as `GenericUser::handle_message()` parses the whole binary
+                                                        // message again this redundancy is acceptable in favour of
+                                                        // avoiding carrying over the Spongos state within `Message`
+                                                        message: orphaned_msg,
+                                                        ..
+                                                    }),
+                             ..
+                         }) => {
+                        // The message might be unreadable because it's predecessor might still be pending
+                        // to be retrieved from the Tangle. We could defensively check if the predecessor
+                        // is already present in the state, but we don't want to couple this iterator to
+                        // a memory-intensive storage. Instead, we take the optimistic approach and store
+                        // the msg for later if the handling has failed.
+                        self.msg_queue
+                            .entry(linked_msg_address)
+                            .or_default()
+                            .push_back((relative_address, orphaned_msg));
+
+                        continue
+                    }
+                    Some(message) => {
+                        // Check if message has descendants pending to process and stage them for processing
+                        if let Some(msgs) = self.msg_queue.remove(&message.address().relative()) {
+                            self.stage.extend(msgs);
                         }
-                        Err(_) => None,
+
+                        return Some(Ok(message))
                     }
+                    // message-Handling errors are a normal execution path, just skip them
+                    None => continue,
                 }
-            };
-
-            match handled {
-                Some(Message {
-                    header:
-                        HDF {
-                            linked_msg_address: Some(linked_msg_address),
-                            ..
-                        },
-                    content:
-                        MessageContent::Orphan(Orphan {
-                            // Currently ignoring cursor, as `GenericUser::handle_message()` parses the whole binary
-                            // message again this redundancy is acceptable in favour of
-                            // avoiding carrying over the Spongos state within `Message`
-                            message: orphaned_msg,
-                            ..
-                        }),
-                    ..
-                }) => {
-                    // The message might be unreadable because it's predecessor might still be pending
-                    // to be retrieved from the Tangle. We could defensively check if the predecessor
-                    // is already present in the state, but we don't want to couple this iterator to
-                    // a memory-intensive storage. Instead, we take the optimistic approach and store
-                    // the msg for later if the handling has failed.
-                    self.msg_queue
-                        .entry(linked_msg_address)
-                        .or_default()
-                        .push_back((relative_address, orphaned_msg));
-
-                    self.next().await
-                }
-                Some(message) => {
-                    // Check if message has descendants pending to process and stage them for processing
-                    if let Some(msgs) = self.msg_queue.remove(&message.address().relative()) {
-                        self.stage.extend(msgs);
-                    }
-
-                    Some(Ok(message))
-                }
-                // message-Handling errors are a normal execution path, just skip them
-                None => self.next().await,
-            }
-        } else {
-            // Stage is empty, populate it with some more messages
-            let (topic, publisher, cursor) = match self.ids_stack.pop() {
-                Some(id_cursor) => id_cursor,
-                None => {
-                    // new round
-                    self.successful_round = false;
-                    self.ids_stack = self
-                        .user
-                        .cursors()
-                        .filter(|(_, p, _)| !p.is_readonly())
-                        .map(|(t, p, c)| (t.clone(), p.identifier().clone(), c))
-                        .collect();
-                    self.ids_stack.pop()?
-                }
-            };
-            let base_address = self.user.stream_address()?.base();
-            let rel_address = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
-            let address = Address::new(base_address, rel_address);
-
-            match self.user.transport_mut().recv_message(address).await {
-                Ok(msg) => {
-                    self.stage.push_back((address.relative(), msg));
-                    self.successful_round = true;
-                    self.next().await
-                }
-                Err(_e) => {
-                    // Message not found or network error. Right now we are not distinguishing
-                    // between each case, so we must assume it's message not found.
-                    // When we introduce typed error handling and are able to distinguish,
-                    // Return Err(e) if error is network-related or any other transient error
-                    if self.ids_stack.is_empty() && !self.successful_round {
-                        // After trying all ids, none has produced an existing link, end of stream (for now...)
-                        None
-                    } else {
-                        // At least one id is producing existing links. continue...
-                        self.next().await
-                    }
+            } else {
+                if let None = self.populate_stage().await {
+                    return None
                 }
             }
         }
+    }
+
+    async fn process_message(
+        &mut self,
+        address: Address,
+        relative_address: MsgId,
+        binary_msg: TransportMessage,
+    ) -> Option<Message>
+    where
+        T: for<'b> Transport<'b, Msg = TransportMessage>,
+    {
+        let cached_message = self.cache.remove(&relative_address);
+        if let Some(msg) = cached_message {
+            return Some(msg);
+        }
+
+        match self.user.handle_message(address, binary_msg).await {
+            Ok(message) => {
+                self.cache.insert(relative_address, message.clone());
+                Some(message)
+            }
+            Err(_) => None,
+        }
+    }
+
+    async fn populate_stage(&mut self) -> Option<()>
+    where
+        T: for<'b> Transport<'b, Msg = TransportMessage>,
+    {
+        let (topic, publisher, cursor) = match self.ids_stack.pop() {
+            Some(id_cursor) => id_cursor,
+            None => {
+                self.reset_stack();
+                self.ids_stack.pop()?
+            }
+        };
+
+        let base_address = self.user.stream_address()?.base();
+        let rel_address = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
+        let address = Address::new(base_address, rel_address);
+
+        match self.user.transport_mut().recv_message(address).await {
+            Ok(msg) => {
+                self.stage.push_back((address.relative(), msg));
+                self.successful_round = true;
+                Some(())
+            }
+            Err(_) => {
+                if self.ids_stack.is_empty() && !self.successful_round {
+                    // Officially end of stream
+                    None
+                } else {
+                    // At least one id is producing existing links. continue...
+                    Some(())
+                }
+            }
+        }
+    }
+
+    fn reset_stack(&mut self) {
+        self.successful_round = false;
+        self.ids_stack = self
+            .user
+            .cursors()
+            .filter(|(_, p, _)| !p.is_readonly())
+            .map(|(t, p, c)| (t.clone(), p.identifier().clone(), c))
+            .collect();
     }
 }
 
