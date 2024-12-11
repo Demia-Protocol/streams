@@ -84,7 +84,7 @@ impl core::hash::Hash for DIDUrlInfo {
 impl PartialEq for DIDUrlInfo {
     fn eq(&self, other: &Self) -> bool {
         self.did == other.did
-            && self.client_url == other.client_url
+            //&& self.client_url == other.client_url
             && self.exchange_fragment == other.exchange_fragment
             && self.signing_fragment == other.signing_fragment
     }
