@@ -52,7 +52,7 @@ identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch
 isocountry = { version = "0.3", optional = true }
 
 iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch="sdk-direct-import", features = ["tls", "stronghold"], optional = true }
-iota_stronghold = { git = "https://github.com/demia-protocol/stronghold.rs", branch="sdk-direct-import", optional = true}
+iota_stronghold = { git = "https://github.com/demia-protocol/stronghold.rs", branch="iota-sdk", optional = true}
 
 reqwest = {version = "0.12.4", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
