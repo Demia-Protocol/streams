@@ -48,17 +48,17 @@ prefix-hex = "0.7.0"
 
 # Optional dependencies
 futures = {version = "0.3.8", default-features = false, optional = true}
-identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch="sdk-direct-import", default-features = true, optional = true}
+identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch="iota-sdk", default-features = true, optional = true}
 isocountry = { version = "0.3", optional = true }
 
-iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch="sdk-direct-import", features = ["tls", "stronghold"], optional = true }
+iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch="develop-demia", features = ["tls", "stronghold"], optional = true }
 iota_stronghold = { git = "https://github.com/demia-protocol/stronghold.rs", branch="iota-sdk", optional = true}
 
 reqwest = {version = "0.12.4", optional = true, default-features = false, features = ["json", "rustls-tls"]}
 serde = {version = "1.0", default-features = false, features = ["derive"], optional = true}
 serde-big-array = { version = "0.5", default-features = false}
 serde_json = {version = "1.0.81", default-features = false}
-spin = {version = "0.9.2", default-features = false, features = ["mutex", "spin_mutex"], optional = true}
+spin = {version = "0.9.2", default-features = false, features = ["mutex", "spin_mutex", "rwlock"], optional = true}
 rayon = {version = "1.5.3", default-features = false, optional = true}
 sqlx = { version = "0.8.2", features = ["runtime-tokio-native-tls", "mysql", "macros", "chrono"], optional = true}
 chrono = {version = "0.4.23", features = ["serde"]}
