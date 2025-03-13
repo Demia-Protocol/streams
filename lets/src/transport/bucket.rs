@@ -26,7 +26,7 @@ pub struct Client<Msg = TransportMessage> {
     /// Mapping of stored [Addresses](`Address`) and `Messages`
     // Use BTreeMap instead of HashMap to make BucketTransport nostd without pulling hashbrown
     // (this transport is for hacking purposes only, performance is no concern)
-    bucket: Arc<spin::Mutex<BTreeMap<Address, Vec<Msg>>>>,
+    bucket: Arc<spin::RwLock<BTreeMap<Address, Vec<Msg>>>>,
 }
 
 impl<Msg> Client<Msg> {
@@ -40,7 +40,7 @@ impl<Msg> Default for Client<Msg> {
     // Implement default manually because derive puts Default bounds in type parameters
     fn default() -> Self {
         Self {
-            bucket: Arc::new(spin::Mutex::new(BTreeMap::default())),
+            bucket: Arc::new(spin::RwLock::new(BTreeMap::default())),
         }
     }
 }
@@ -81,16 +81,12 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        let mut bucket = self.bucket.lock();
-        let entry = bucket.entry(addr).or_default();
-        // Only store if the bucket does not contain the message already
-        // TODO: We'll need to address the potential for duplicates in the future
-        if entry.contains(&msg) {
-            Err(Error::AddressError("Message already exists", addr))
-        } else {
-            entry.push(msg.clone());
-            Ok(msg)
-        }
+        self.bucket
+            .write()
+            .entry(addr)
+            .or_default()
+            .push(msg.clone());
+        Ok(msg)
     }
 
     /// Returns a vector of messages from the bucket, or an error if the bucket doesn't contain the
@@ -103,7 +99,7 @@ where
     /// A vector of messages.
     async fn recv_messages(&mut self, address: Address) -> Result<Vec<Msg>> {
         self.bucket
-            .lock()
+            .read()
             .get(&address)
             .cloned()
             .ok_or(Error::AddressError("No message found", address))
@@ -121,7 +117,7 @@ where
 #[cfg(feature = "serde")]
 impl<Msg: Serialize> Serialize for Client<Msg> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let bucket = self.bucket.lock();
+        let bucket = self.bucket.read();
         bucket.serialize(serializer)
     }
 }
@@ -131,7 +127,7 @@ impl<'de, Msg: Deserialize<'de>> Deserialize<'de> for Client<Msg> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
         let bucket: BTreeMap<Address, Vec<Msg>> = Deserialize::deserialize(deserializer)?;
         Ok(Client {
-            bucket: Arc::new(spin::Mutex::new(bucket)),
+            bucket: Arc::new(spin::RwLock::new(bucket)),
         })
     }
 }

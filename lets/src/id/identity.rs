@@ -12,9 +12,10 @@ use async_trait::async_trait;
 use crypto::signatures::ed25519;
 #[cfg(feature = "did")]
 use identity_demia::{demia::DemiaDID, did::DID as IdentityDID};
-
 #[cfg(feature = "did")]
-use iota_client::{api::EncryptedData, stronghold::Location};
+use iota_sdk::demia::EncryptedData;
+#[cfg(feature = "did")]
+use iota_stronghold::Location;
 
 // IOTA-Streams
 use spongos::ddml::commands::{Ed25519 as Ed25519Command, X25519};
@@ -207,7 +208,7 @@ impl IdentityKind {
                     .ed25519_sign(location, data)
                     .await
                     .map_err(|e| SpongosError::Context("signing hash", e.to_string()))?;
-                Ok(Ed25519Sig::from_bytes(sig))
+                Ok(Ed25519Sig::from_bytes(sig.to_bytes()))
             }
             IdentityKind::Ed25519(sk) => {
                 let sig = sk.inner().sign(data);
@@ -366,7 +367,7 @@ where
                             .await
                             .map_err(|e| SpongosError::Context("signing hash", e.to_string()))?;
 
-                        self.absorb(NBytes::new(sig))
+                        self.absorb(NBytes::new(sig.to_bytes()))
                     }
                 }
             }

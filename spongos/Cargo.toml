@@ -27,7 +27,7 @@ serde = ["dep:serde"]
 
 [dependencies]
 # IOTA Dependencies
-iota-crypto = {version = "0.23.1", default-features = false, features = ["x25519", "ed25519", "sha", "blake2b", "aes-gcm", "cipher", "serde"]}
+iota-crypto = {version = "0.23.2", default-features = false, features = ["x25519", "ed25519", "sha", "blake2b", "aes-gcm", "cipher", "serde"]}
 
 # 3rd-party dependencies 
 digest = {version = "0.9", default-features = false}
