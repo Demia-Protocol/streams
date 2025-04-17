@@ -2,11 +2,17 @@
 use alloc::{borrow::ToOwned, boxed::Box, string::ToString, vec::Vec};
 use core::fmt::{Debug, Formatter, Result as FormatResult};
 
+#[cfg(feature = "did")]
+use alloc::sync::Arc;
+
 // 3rd-party
 use async_trait::async_trait;
 use futures::{future, TryStreamExt};
 use hashbrown::{HashMap, HashSet};
 use rand::Rng;
+
+#[cfg(feature = "did")]
+use tokio::sync::RwLock;
 
 // IOTA
 
@@ -178,7 +184,7 @@ impl<T> User<T> {
     }
 
     #[cfg(feature = "did")]
-    pub fn with_stronghold(&mut self, stronghold: StrongholdSecretManager) {
+    pub fn with_stronghold(&mut self, stronghold: Arc<RwLock<StrongholdSecretManager>>) {
         if let Some(identity) = self.identity_mut() {
             if let IdentityKind::DID(DID::PrivateKey(info)) = identity.identity_kind() {
                 let did_info = info.url_info_mut();
@@ -326,9 +332,9 @@ impl<T> User<T> {
         spongos: Spongos,
         linked_msg_address: MsgId,
     ) {
-        let is_stream_address = self.stream_address().map_or(false, |stream_address| {
-            stream_address.relative() == linked_msg_address
-        });
+        let is_stream_address = self
+            .stream_address()
+            .is_some_and(|stream_address| stream_address.relative() == linked_msg_address);
         // Do not remove announcement message from store
         if self.lean() && !is_stream_address {
             self.state.spongos_store.remove(&linked_msg_address);
@@ -876,7 +882,7 @@ impl ContentSizeof<State> for sizeof::Context {
 }
 
 #[async_trait]
-impl<'a> ContentWrap<State> for wrap::Context<&'a mut [u8]> {
+impl ContentWrap<State> for wrap::Context<&mut [u8]> {
     async fn wrap(&mut self, user_state: &mut State) -> SpongosResult<&mut Self> {
         self.mask(Maybe::new(user_state.user_id.as_ref()))?
             .mask(Maybe::new(user_state.stream_address.as_ref()))?
@@ -946,7 +952,7 @@ impl<'a> ContentWrap<State> for wrap::Context<&'a mut [u8]> {
 }
 
 #[async_trait]
-impl<'a> ContentUnwrap<State> for unwrap::Context<&'a [u8]> {
+impl ContentUnwrap<State> for unwrap::Context<&[u8]> {
     async fn unwrap(&mut self, user_state: &mut State) -> SpongosResult<&mut Self> {
         self.mask(Maybe::new(&mut user_state.user_id))?
             .mask(Maybe::new(&mut user_state.stream_address))?

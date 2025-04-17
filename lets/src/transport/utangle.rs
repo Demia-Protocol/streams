@@ -1,5 +1,5 @@
 // Rust
-#[cfg(not(feature="std"))]
+#[cfg(not(feature = "std"))]
 use alloc::string::ToString;
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{

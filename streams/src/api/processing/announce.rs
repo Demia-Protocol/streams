@@ -62,7 +62,7 @@ where
         if permission.is_readonly() {
             return Err(Error::WrongRole(
                 "ReadWrite",
-                identifier,
+                Box::new(identifier),
                 "make a new branch",
             ));
         }

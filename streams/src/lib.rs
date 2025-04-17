@@ -66,5 +66,9 @@ mod error;
 pub use error::{Error, Result};
 
 pub use lets::{
-    address::Address, error::Error as LetsError, id, message::{Topic, TopicHash, TransportMessage}, transport,
+    address::Address,
+    error::Error as LetsError,
+    id,
+    message::{Topic, TopicHash, TransportMessage},
+    transport,
 };

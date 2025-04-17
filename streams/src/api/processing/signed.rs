@@ -67,7 +67,7 @@ where
         if permission.is_readonly() {
             return Err(Error::WrongRole(
                 "ReadWrite",
-                permission.identifier().clone(),
+                Box::new(permission.identifier().clone()),
                 "send a signed packet",
             ));
         }
