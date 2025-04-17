@@ -83,7 +83,7 @@ pub(crate) struct Wrap<'a, 'b, Subscribers, Psks> {
     subscribers_lifetime: PhantomData<&'b Identifier>,
 }
 
-impl<'a, 'b, Subscribers, Psks> Wrap<'a, 'b, Subscribers, Psks> {
+impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
     /// Creates a new [`Wrap`] struct for a keyload message
     ///
     /// # Arguments:
@@ -431,9 +431,9 @@ enum SubscriberKind {
     #[allow(clippy::upper_case_acronyms)]
     DID,
 }
-async fn unwrap_subscribers<'a, IS: io::IStream>(
+async fn unwrap_subscribers<IS: io::IStream>(
     ctx: &mut unwrap::Context<IS>,
-    keyload: &mut Unwrap<'a>,
+    keyload: &mut Unwrap<'_>,
     num_subscribers: Size,
     key: &mut Option<[u8; KEY_SIZE]>,
     kind: SubscriberKind,

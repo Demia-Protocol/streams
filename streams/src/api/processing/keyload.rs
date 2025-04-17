@@ -44,7 +44,7 @@ where
         if !permission.is_admin() {
             return Err(Error::WrongRole(
                 "Admin",
-                permission.identifier().clone(),
+                Box::new(permission.identifier().clone()),
                 "send a keyload",
             ));
         }
@@ -84,7 +84,7 @@ where
         if !permission.is_admin() {
             return Err(Error::WrongRole(
                 "Admin",
-                permission.identifier().clone(),
+                Box::new(permission.identifier().clone()),
                 "send a keyload",
             ));
         }
@@ -116,7 +116,7 @@ where
     /// * `topic`: The [`Topic`] of the branch the permissions will be updated for.
     /// * `subscribers`: The updated [`Permissioned`] list for the branch.
     /// * `psk_ids`: A list of [Psk Id's](`PskId`) with read access for the branch.
-    pub async fn send_keyload<'a, Subscribers, Psks, Top>(
+    pub async fn send_keyload<Subscribers, Psks, Top>(
         &mut self,
         topic: Top,
         subscribers: Subscribers,
@@ -144,7 +144,11 @@ where
             .permission(&topic)
             .ok_or(Error::NoCursor(topic.clone()))?;
         if !permission.is_admin() {
-            return Err(Error::WrongRole("Admin", identifier, "send a keyload"));
+            return Err(Error::WrongRole(
+                "Admin",
+                Box::new(identifier),
+                "send a keyload",
+            ));
         }
 
         // Link message to edge of branch
@@ -262,7 +266,11 @@ where
             .ok_or(Error::NoCursor(topic.clone()))?
             .is_admin()
         {
-            return Err(Error::WrongRole("admin", publisher, "receive keyload"));
+            return Err(Error::WrongRole(
+                "admin",
+                Box::new(publisher),
+                "receive keyload",
+            ));
         }
         // From the point of view of cursor tracking, the message exists, regardless of the validity or
         // accessibility to its content. Therefore we must update the cursor of the publisher before

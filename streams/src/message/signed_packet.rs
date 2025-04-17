@@ -149,7 +149,7 @@ impl<'a> Unwrap<'a> {
 }
 
 #[async_trait]
-impl<'a, IS> ContentUnwrap<Unwrap<'a>> for unwrap::Context<IS>
+impl<IS> ContentUnwrap<Unwrap<'_>> for unwrap::Context<IS>
 where
     IS: io::IStream + Send,
 {

@@ -199,7 +199,7 @@ impl IdentityKind {
                             Error::did("join did fragments", e).to_string(),
                         )
                     })?;
-                
+
                 let lock = stronghold.read().await;
                 // update stronghold snapshot
                 let _ = lock.read_stronghold_snapshot().await;

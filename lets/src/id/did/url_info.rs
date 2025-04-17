@@ -1,9 +1,9 @@
 // Rust
-use alloc::{string::String, vec::Vec, sync::Arc};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use core::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
-    hash::Hasher
+    hash::Hasher,
 };
 
 use tokio::sync::RwLock;

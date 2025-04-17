@@ -164,25 +164,27 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             if let Some((relative_address, binary_msg)) = self.stage.pop_front() {
                 // Drain stage if not empty...
                 let address = Address::new(self.user.stream_address()?.base(), relative_address);
-                let handled = self.process_message(address, relative_address, binary_msg).await;
+                let handled = self
+                    .process_message(address, relative_address, binary_msg)
+                    .await;
 
                 match handled {
                     Some(Message {
-                             header:
-                             HDF {
-                                 linked_msg_address: Some(linked_msg_address),
-                                 ..
-                             },
-                             content:
-                             MessageContent::Orphan(Orphan {
-                                                        // Currently ignoring cursor, as `GenericUser::handle_message()` parses the whole binary
-                                                        // message again this redundancy is acceptable in favour of
-                                                        // avoiding carrying over the Spongos state within `Message`
-                                                        message: orphaned_msg,
-                                                        ..
-                                                    }),
-                             ..
-                         }) => {
+                        header:
+                            HDF {
+                                linked_msg_address: Some(linked_msg_address),
+                                ..
+                            },
+                        content:
+                            MessageContent::Orphan(Orphan {
+                                // Currently ignoring cursor, as `GenericUser::handle_message()` parses the whole binary
+                                // message again this redundancy is acceptable in favour of
+                                // avoiding carrying over the Spongos state within `Message`
+                                message: orphaned_msg,
+                                ..
+                            }),
+                        ..
+                    }) => {
                         // The message might be unreadable because it's predecessor might still be pending
                         // to be retrieved from the Tangle. We could defensively check if the predecessor
                         // is already present in the state, but we don't want to couple this iterator to
@@ -193,7 +195,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
                             .or_default()
                             .push_back((relative_address, orphaned_msg));
 
-                        continue
+                        continue;
                     }
                     Some(message) => {
                         // Check if message has descendants pending to process and stage them for processing
@@ -201,15 +203,13 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
                             self.stage.extend(msgs);
                         }
 
-                        return Some(Ok(message))
+                        return Some(Ok(message));
                     }
                     // message-Handling errors are a normal execution path, just skip them
                     None => continue,
                 }
-            } else {
-                if let None = self.populate_stage().await {
-                    return None
-                }
+            } else if self.populate_stage().await.is_none() {
+                return None;
             }
         }
     }
@@ -401,7 +401,7 @@ where
     }
 }
 
-impl<'a, T> Stream for Messages<'a, T>
+impl<T> Stream for Messages<'_, T>
 where
     T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync,
 {

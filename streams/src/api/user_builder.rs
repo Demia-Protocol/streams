@@ -134,7 +134,6 @@ impl<T> UserBuilder<T> {
     /// # Ok(())
     /// # }
     /// ```
-
     pub fn build<Trans>(self) -> User<Trans>
     where
         T: IntoTransport<Trans>,

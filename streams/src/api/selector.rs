@@ -25,10 +25,10 @@ pub enum Selector {
 impl Selector {
     /// > If the selector is an address, check if the message address is equal to the selector
     /// > address.
-    /// If the selector is a topic, check if the message topic is equal to the selector topic. If
-    /// the selector is an identifier, check if the message publisher is equal to the selector
-    /// identifier. If the selector is a level, check if the message sequence is contained in
-    /// the selector level
+    /// > If the selector is a topic, check if the message topic is equal to the selector topic. If
+    /// > the selector is an identifier, check if the message publisher is equal to the selector
+    /// > identifier. If the selector is a level, check if the message sequence is contained in
+    /// > the selector level
     ///
     /// # Arguments
     ///

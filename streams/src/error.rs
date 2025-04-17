@@ -91,7 +91,7 @@ Any {0} message must be linked to a previous message by including the address of
     Unwrapping(&'static str, Address, LetsError),
 
     #[error("Missing role {0} for {1:?} in order to {2}")]
-    WrongRole(&'static str, Identifier, &'static str),
+    WrongRole(&'static str, Box<Identifier>, &'static str),
 
     #[error("Internal Spongos error: {0}")]
     Spongos(SpongosError),
