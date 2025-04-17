@@ -16,7 +16,7 @@ version = "0.2.1"
 [features]
 default = ["utangle-client", "std", "serde"]
 std = ["lets/std", "spongos/std"]
-did = ["lets/did"]
+did = ["lets/did", "tokio"]
 # Enable re-export of uTangle transport client from LETS
 utangle-client = ["lets/utangle-client"]
 # Enable re-export of IOTA-Tangle transport client from LETS
@@ -45,6 +45,7 @@ async-trait = {version = "0.1", default-features = false}
 futures = {version = "0.3.8", default-features = false}
 hashbrown = {version = "0.12.0", default-features = false, features = ["ahash", "serde"]}
 rand = {version = "0.8.5", default-features = false}
+tokio = {version = "1.15", default-features = false, optional = true}
 
 # Error
 thiserror-no-std = {version = "2.0.2", default-features = false}
@@ -63,7 +64,6 @@ iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch=
 rand = {version = "0.8.5", default-features = false, features = ["std", "std_rng"]}
 lets = {path = "../lets", features = ["tangle-client"]}
 textwrap = {version = "0.15.0", default-features = false}
-tokio = {version = "1.15", default-features = false}
 
 [[example]]
 name = "full-example"

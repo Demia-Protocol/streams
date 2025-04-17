@@ -2,11 +2,17 @@
 use alloc::{borrow::ToOwned, boxed::Box, string::ToString, vec::Vec};
 use core::fmt::{Debug, Formatter, Result as FormatResult};
 
+#[cfg(feature = "did")]
+use alloc::sync::Arc;
+
 // 3rd-party
 use async_trait::async_trait;
 use futures::{future, TryStreamExt};
 use hashbrown::{HashMap, HashSet};
 use rand::Rng;
+
+#[cfg(feature = "did")]
+use tokio::sync::RwLock;
 
 // IOTA
 
@@ -178,7 +184,7 @@ impl<T> User<T> {
     }
 
     #[cfg(feature = "did")]
-    pub fn with_stronghold(&mut self, stronghold: StrongholdSecretManager) {
+    pub fn with_stronghold(&mut self, stronghold: Arc<RwLock<StrongholdSecretManager>>) {
         if let Some(identity) = self.identity_mut() {
             if let IdentityKind::DID(DID::PrivateKey(info)) = identity.identity_kind() {
                 let did_info = info.url_info_mut();

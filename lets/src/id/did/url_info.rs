@@ -1,10 +1,12 @@
 // Rust
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec::Vec, sync::Arc};
 use core::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
-    hash::Hasher,
+    hash::Hasher
 };
+
+use tokio::sync::RwLock;
 
 // IOTA
 use identity_demia::{core::BaseEncoding, demia::DemiaDID, verification::MethodData};
@@ -42,7 +44,7 @@ pub struct DIDUrlInfo {
         feature = "serde",
         serde(default, skip_serializing_if = "Option::is_none", skip)
     )]
-    stronghold: Option<StrongholdSecretManager>,
+    stronghold: Option<Arc<RwLock<StrongholdSecretManager>>>,
 }
 
 impl Default for DIDUrlInfo {
@@ -137,13 +139,13 @@ impl DIDUrlInfo {
         }
     }
 
-    pub fn with_stronghold(mut self, stronghold: StrongholdSecretManager) -> Self {
+    pub fn with_stronghold(mut self, stronghold: Arc<RwLock<StrongholdSecretManager>>) -> Self {
         self.stronghold = Some(stronghold);
         self
     }
 
-    pub fn stronghold(&mut self) -> Result<&mut StrongholdSecretManager> {
-        self.stronghold.as_mut().ok_or(Error::did(
+    pub fn stronghold(&mut self) -> Result<Arc<RwLock<StrongholdSecretManager>>> {
+        self.stronghold.clone().ok_or(Error::did(
             "fetching stronghold",
             "stronghold not found".to_string(),
         ))

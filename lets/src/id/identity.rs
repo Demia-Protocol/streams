@@ -199,12 +199,13 @@ impl IdentityKind {
                             Error::did("join did fragments", e).to_string(),
                         )
                     })?;
-
+                
+                let lock = stronghold.read().await;
                 // update stronghold snapshot
-                let _ = stronghold.read_stronghold_snapshot().await;
+                let _ = lock.read_stronghold_snapshot().await;
 
                 let location = Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
-                let sig = stronghold
+                let sig = lock
                     .ed25519_sign(location, data)
                     .await
                     .map_err(|e| SpongosError::Context("signing hash", e.to_string()))?;
@@ -357,15 +358,17 @@ where
                                 )
                             })?;
 
+                        let lock = stronghold.read().await;
                         // update stronghold snapshot
-                        let _ = stronghold.read_stronghold_snapshot().await;
+                        let _ = lock.read_stronghold_snapshot().await;
 
                         let location =
                             Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
-                        let sig = stronghold
+                        let sig = lock
                             .ed25519_sign(location, &hash)
                             .await
                             .map_err(|e| SpongosError::Context("signing hash", e.to_string()))?;
+                        drop(lock);
 
                         self.absorb(NBytes::new(sig.to_bytes()))
                     }
@@ -411,8 +414,9 @@ where
                 let stronghold = did.info_mut().url_info_mut().stronghold().map_err(|e| {
                     SpongosError::Context("retrieving stronghold adapter", e.to_string())
                 })?;
-                let _ = stronghold.read_stronghold_snapshot().await;
-                let data = stronghold
+                let mut lock = stronghold.write().await;
+                let _ = lock.read_stronghold_snapshot().await;
+                let data = lock
                     .x25519_decrypt(location, data)
                     .await
                     .map_err(|e| SpongosError::Context("decrypting data", e.to_string()))?;
