@@ -584,7 +584,7 @@ where
 
 impl<T> User<T>
 where
-    T: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync,
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync + Clone,
 {
     /// Receive a raw message packet using the internal [`Transport`] client
     ///

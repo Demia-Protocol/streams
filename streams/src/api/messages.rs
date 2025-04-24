@@ -137,7 +137,7 @@ struct MessagesState<'a, T> {
     cache: HashMap<MsgId, Message>,
 }
 
-impl<'a, T: Send + Sync> MessagesState<'a, T> {
+impl<'a, T: Send + Sync + Clone> MessagesState<'a, T> {
     fn new(
         user: &'a mut User<T>,
         ids_stack: Vec<(Topic, Identifier, usize)>,
@@ -241,33 +241,46 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
     where
         T: for<'b> Transport<'b, Msg = TransportMessage>,
     {
-        let (topic, publisher, cursor) = match self.ids_stack.pop() {
-            Some(id_cursor) => id_cursor,
-            None => {
-                self.reset_stack();
-                self.ids_stack.pop()?
-            }
-        };
+        if self.ids_stack.is_empty() {
+            self.reset_stack();
+        }
 
-        let base_address = self.user.stream_address()?.base();
-        let rel_address = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
-        let address = Address::new(base_address, rel_address);
+        // Collect a batch of tasks for concurrent processing
+        let tasks: Vec<_> = self.ids_stack.drain(..)
+            .map(|(topic, publisher, cursor)| {
+                let base_address = self.user.stream_address().unwrap_or_default().base();
+                let rel_address = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
+                let address = Address::new(base_address, rel_address);
 
-        match self.user.transport_mut().recv_message(address).await {
-            Ok(msg) => {
-                self.stage.push_back((address.relative(), msg));
-                self.successful_round = true;
-                Some(())
-            }
-            Err(_) => {
-                if self.ids_stack.is_empty() && !self.successful_round {
-                    // Officially end of stream
-                    None
-                } else {
-                    // At least one id is producing existing links. continue...
-                    Some(())
+                let mut transport = self.user.transport().clone();
+                async move {
+                    (address.relative(), transport.recv_message(address).await)
+                }
+            })
+            .collect();
+
+        // Run all fetch tasks concurrently
+        let results = futures::future::join_all(tasks).await;
+
+        // Process the results
+        for (relative_address, result) in results {
+            match result {
+                Ok(msg) => {
+                    self.stage.push_back((relative_address, msg));
+                    self.successful_round = true;
+                }
+                Err(_) => {
+                    // Handle errors gracefully: skip failed fetches
+                    continue;
                 }
             }
+        }
+
+        // Check if no successful messages were retrieved
+        if !self.successful_round && self.stage.is_empty() {
+            None
+        } else {
+            Some(())
         }
     }
 
@@ -297,7 +310,7 @@ impl<'a, T: Send> From<&'a mut User<T>> for MessagesState<'a, T> {
 
 impl<'a, T> Messages<'a, T>
 where
-    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync,
+    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync + Clone,
 {
     pub(crate) fn new(user: &'a mut User<T>) -> Self {
         let mut state = MessagesState::from(user);
@@ -394,7 +407,7 @@ where
 
 impl<'a, T> From<&'a mut User<T>> for Messages<'a, T>
 where
-    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync,
+    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync + Clone,
 {
     fn from(user: &'a mut User<T>) -> Self {
         Self::new(user)
@@ -403,7 +416,7 @@ where
 
 impl<T> Stream for Messages<'_, T>
 where
-    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync,
+    T: for<'b> Transport<'b, Msg = TransportMessage> + Send + Sync + Clone,
 {
     type Item = Result<Message>;
 

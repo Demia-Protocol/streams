@@ -191,7 +191,7 @@ impl<T> UserBuilder<T> {
     pub async fn recover<Trans>(self, announcement: Address) -> Result<User<Trans>>
     where
         T: IntoTransport<Trans>,
-        Trans: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync,
+        Trans: for<'a> Transport<'a, Msg = TransportMessage> + Send + Sync + Clone,
     {
         let mut user = self.build();
         user.receive_message(announcement).await?;
