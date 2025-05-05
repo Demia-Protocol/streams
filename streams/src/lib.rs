@@ -52,7 +52,7 @@ mod message;
 mod api;
 
 pub use api::{
-    message::{Message, MessageContent},
+    message::*,
     message_builder::MessageBuilder,
     messages::Messages,
     selector::Selector,
