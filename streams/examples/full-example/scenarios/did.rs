@@ -9,7 +9,7 @@ use textwrap::{fill, indent};
 use identity_demia::{
     demia::{
         block::{address::Address, output::AliasOutputBuilder},
-        IotaClientExt, DemiaDocument, IotaIdentityClientExt, NetworkName,
+        DemiaDocument, IotaClientExt, IotaIdentityClientExt, NetworkName,
     },
     did::DID as IdentityDID,
     verification::{MethodData, MethodScope, MethodType, VerificationMethod},

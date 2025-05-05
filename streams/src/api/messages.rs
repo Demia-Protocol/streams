@@ -152,7 +152,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             stage: Default::default(),
             successful_round: Default::default(),
             cache,
-            filter
+            filter,
         }
     }
 
@@ -281,11 +281,9 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             .user
             .cursors()
             .filter(|(_, p, _)| !p.is_readonly())
-            .filter(|(t, _, _)| {
-                match filter {
-                    Some(filter) => filter.eq(t.str()),
-                    None => true
-                }
+            .filter(|(t, _, _)| match filter {
+                Some(filter) => filter.eq(t.str()),
+                None => true,
             })
             .map(|(t, p, c)| (t.clone(), p.identifier().clone(), c))
             .collect();
@@ -330,11 +328,8 @@ where
             (state, r)
         }))
     }
-    
-    pub(crate) fn new_with_filter(
-        user: &'a mut User<T>,
-        filter: &'a str
-    ) -> Self {
+
+    pub(crate) fn new_with_filter(user: &'a mut User<T>, filter: &'a str) -> Self {
         let mut state = MessagesState::from(user);
         state.filter = Some(filter);
         Self(Box::pin(async move {
@@ -663,19 +658,16 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_messages_with_a_filter() {
-        let result = tokio::time::timeout(tokio::time::Duration::from_secs(60), async {
-            run().await
-        }).await;
-        
+        let result =
+            tokio::time::timeout(tokio::time::Duration::from_secs(60), async { run().await }).await;
+
         if result.is_err() {
             panic!("timed out waiting for a filter");
         }
-        
     }
-    
-    
+
     async fn run() -> Result<()> {
-    let p = b"payload";
+        let p = b"payload";
         let (mut author, mut subscriber1, announcement_link, transport) =
             author_subscriber_fixture().await?;
 
@@ -686,10 +678,10 @@ mod tests {
         let branch_2 = "BRANCH_2";
         let _branch_announcement_2 = author.new_branch("BASE_BRANCH", branch_2).await?;
         let _keyload_2 = author.send_keyload_for_all_rw(branch_2).await?;
-        
+
         subscriber1.sync().await?;
 
-        // Send messages into branch 1 
+        // Send messages into branch 1
         let mut sent_msgs = vec![];
         for _ in 0..5 {
             let packet = subscriber1.send_signed_packet(branch_1, &p, &p).await?;
@@ -701,21 +693,17 @@ mod tests {
             let packet = subscriber1.send_signed_packet(branch_2, &p, &p).await?;
             sent_msgs.push(packet.address());
         }
-        
-        // Fetch the messages in order of branch 1 and then branch 2 
+
+        // Fetch the messages in order of branch 1 and then branch 2
         let mut msgs = vec![];
         let mut branch_1_message_filter = author.filtered_messages(branch_1);
         for _ in 0..5 {
             match branch_1_message_filter.next().await {
-                Some(Ok(msg)) => {
-                    match msg.as_signed_packet() {
-                        Some(_) => {
-                           msgs.push(msg.address)
-                        }
-                        None => panic!("Message should be a signed packet")
-                    }
-                }
-                _ => panic!("Should be able to find filtered messages for branch 1")
+                Some(Ok(msg)) => match msg.as_signed_packet() {
+                    Some(_) => msgs.push(msg.address),
+                    None => panic!("Message should be a signed packet"),
+                },
+                _ => panic!("Should be able to find filtered messages for branch 1"),
             }
         }
         drop(branch_1_message_filter);
@@ -723,22 +711,17 @@ mod tests {
         let mut branch_2_message_filter = author.filtered_messages(branch_2);
         for _ in 0..3 {
             match branch_2_message_filter.next().await {
-                Some(Ok(msg)) => {
-                    match msg.as_signed_packet() {
-                        Some(_) => {
-                            msgs.push(msg.address)
-                        }
-                        None => panic!("Message should be a signed packet")
-                    }
-                }
-                _ => panic!("Should be able to find filtered messages for branch 1")
+                Some(Ok(msg)) => match msg.as_signed_packet() {
+                    Some(_) => msgs.push(msg.address),
+                    None => panic!("Message should be a signed packet"),
+                },
+                _ => panic!("Should be able to find filtered messages for branch 1"),
             }
         }
         drop(branch_2_message_filter);
 
         // Compare sent and received messages, the orders should be the same if fetched via filter
         assert_eq!(msgs, sent_msgs);
-        
 
         // Load up a second subscriber and sync the base branch
         let mut subscriber2 =
@@ -748,7 +731,6 @@ mod tests {
 
         Ok(())
     }
-
 
     /// Prepare a simple scenario with an author, a subscriber, a channel announcement and a bucket
     /// transport
