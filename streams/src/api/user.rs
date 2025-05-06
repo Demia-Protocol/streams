@@ -609,12 +609,30 @@ where
         Messages::new(self)
     }
 
+    /// Start a [`Messages`] stream to traverse the channel messages with a filter
+    ///
+    /// See the documentation in [`Messages`] for more details and examples.
+    pub fn filtered_messages<'a>(&'a mut self, filter: &'a str) -> Messages<'a, T> {
+        Messages::new_with_filter(self, filter)
+    }
+
     /// Iteratively fetches all the next messages until internal state has caught up
     ///
     /// If succeeded, returns the number of messages advanced.
     pub async fn sync(&mut self) -> Result<usize> {
         // ignoring the result is sound as Drain::Error is Infallible
         self.messages()
+            .try_fold(0, |n, _| future::ok(n + 1))
+            .await
+            .map_err(Error::Messages)
+    }
+
+    /// Synchronize the base branch of the Stream
+    ///
+    /// If succeeded, returns the number of messages advanced.
+    pub async fn sync_base_branch(&mut self) -> Result<usize> {
+        let base_branch = self.base_branch().to_string();
+        self.filtered_messages(base_branch.as_str())
             .try_fold(0, |n, _| future::ok(n + 1))
             .await
             .map_err(Error::Messages)

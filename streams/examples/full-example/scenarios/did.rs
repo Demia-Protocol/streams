@@ -1,5 +1,6 @@
 // Rust
 
+use std::sync::Arc;
 // 3rd-arty
 use anyhow::anyhow;
 use textwrap::{fill, indent};
@@ -8,7 +9,7 @@ use textwrap::{fill, indent};
 use identity_demia::{
     demia::{
         block::{address::Address, output::AliasOutputBuilder},
-        IotaClientExt, IotaDocument, IotaIdentityClientExt, NetworkName,
+        DemiaDocument, IotaClientExt, IotaIdentityClientExt, NetworkName,
     },
     did::DID as IdentityDID,
     verification::{MethodData, MethodScope, MethodType, VerificationMethod},
@@ -311,7 +312,7 @@ async fn make_did_info(
                 exchange_fragment,
                 signing_fragment,
             );
-            url_info = url_info.with_stronghold(stronghold);
+            url_info = url_info.with_stronghold(Arc::new(RwLock::new(stronghold)));
             Ok(DIDInfo::new(url_info))
         }
         _ => Err(anyhow!("unexpected Stronghold type")),
@@ -355,10 +356,10 @@ async fn new_doc(
     doc_public: &PublicKey,
     doc_signing_fragment: &str,
     output_address: Address,
-) -> anyhow::Result<IotaDocument> {
+) -> anyhow::Result<DemiaDocument> {
     // Create a new document with a base method
     let network_name: NetworkName = did_client.get_network_name().await?.try_into()?;
-    let mut doc = IotaDocument::new(&DEFALT_COUNTRY, &network_name);
+    let mut doc = DemiaDocument::new(&DEFALT_COUNTRY, &network_name);
 
     // let jwk: Jwk = encode_public_ed25519_jwk(&doc_public);
     // let _method = VerificationMethod::new_from_jwk(doc.id().clone(), jwk, Some(&doc_signing_fragment)).map_err(|e| anyhow!(e.to_string()))?;
@@ -385,7 +386,7 @@ async fn new_doc(
 // stronghold vaults
 async fn generate_streams_keys(
     stronghold: &mut SecretManager,
-    doc: &mut IotaDocument,
+    doc: &mut DemiaDocument,
     doc_secret: &SecretKey,
     doc_signing_fragment: &str,
     signing_fragment: &str,
@@ -460,6 +461,8 @@ use identity_demia::verification::jwk::Jwk;
 use identity_demia::verification::jwk::JwkParamsOkp;
 use identity_demia::verification::jws::JwsAlgorithm;
 use identity_demia::verification::jwu;
+use tokio::sync::RwLock;
+
 pub(crate) fn encode_public_ed25519_jwk(public_key: &PublicKey) -> Jwk {
     let x = jwu::encode_b64(public_key.as_ref());
     let mut params = JwkParamsOkp::new();
