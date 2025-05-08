@@ -350,7 +350,7 @@ mod tests {
 
     #[tokio::test]
     async fn send_and_recv_message() -> Result<()> {
-        let mut client = Client::new("http://nodes.02.demia-testing-domain.com:14102");
+        let mut client = Client::new("http://localhost:14265");
         let address = Address::new(
             AppAddr::default(),
             MsgId::gen(

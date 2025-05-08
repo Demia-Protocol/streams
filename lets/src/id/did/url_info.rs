@@ -139,6 +139,22 @@ impl DIDUrlInfo {
         }
     }
 
+    /// Creates a new [`DIDUrlInfo`] wrapper using the values from
+    /// the profided DIDUrlInfo. Does not clone stronghold.
+    ///
+    /// # Arguments
+    /// * `did`: DID string
+    /// * `info`: The DIDUrlInfo we clone from
+    pub fn new_from(did: DemiaDID, info: &DIDUrlInfo) -> Self {
+        Self {
+            did: did.to_string(),
+            client_url: info.client_url.clone(),
+            exchange_fragment: info.exchange_fragment.clone(),
+            signing_fragment: info.signing_fragment.clone(),
+            stronghold: None,
+        }
+    }
+
     pub fn with_stronghold(mut self, stronghold: Arc<RwLock<StrongholdSecretManager>>) -> Self {
         self.stronghold = Some(stronghold);
         self

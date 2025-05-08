@@ -130,6 +130,7 @@ type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + 'a + Send>>;
 
 struct MessagesState<'a, T> {
     user: &'a mut User<T>,
+    pub(crate) filter: Option<&'a str>,
     ids_stack: Vec<(Topic, Identifier, usize)>,
     msg_queue: HashMap<MsgId, VecDeque<(MsgId, TransportMessage)>>,
     stage: VecDeque<(MsgId, TransportMessage)>,
@@ -142,6 +143,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
         user: &'a mut User<T>,
         ids_stack: Vec<(Topic, Identifier, usize)>,
         cache: HashMap<MsgId, Message>,
+        filter: Option<&'a str>,
     ) -> Self {
         Self {
             user,
@@ -150,6 +152,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             stage: Default::default(),
             successful_round: Default::default(),
             cache,
+            filter,
         }
     }
 
@@ -273,10 +276,15 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
 
     fn reset_stack(&mut self) {
         self.successful_round = false;
+        let filter = self.filter.clone();
         self.ids_stack = self
             .user
             .cursors()
             .filter(|(_, p, _)| !p.is_readonly())
+            .filter(|(t, _, _)| match filter {
+                Some(filter) => filter.eq(t.str()),
+                None => true,
+            })
             .map(|(t, p, c)| (t.clone(), p.identifier().clone(), c))
             .collect();
     }
@@ -291,6 +299,7 @@ impl<'a, T: Send> From<&'a mut User<T>> for MessagesState<'a, T> {
             stage: VecDeque::new(),
             successful_round: false,
             cache: HashMap::new(),
+            filter: None,
         }
     }
 }
@@ -313,7 +322,16 @@ where
         start: Option<(Topic, Identifier, usize)>,
     ) -> Self {
         let start = start.into_iter().collect();
-        let mut state = MessagesState::new(user, start, cache);
+        let mut state = MessagesState::new(user, start, cache, None);
+        Self(Box::pin(async move {
+            let r = state.next().await;
+            (state, r)
+        }))
+    }
+
+    pub(crate) fn new_with_filter(user: &'a mut User<T>, filter: &'a str) -> Self {
+        let mut state = MessagesState::from(user);
+        state.filter = Some(filter);
         Self(Box::pin(async move {
             let r = state.next().await;
             (state, r)
@@ -634,6 +652,82 @@ mod tests {
             && address_2 == keyload_2.address()
             && address_3 == last_signed_packet.address()
         ));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn fetch_messages_with_a_filter() {
+        let result =
+            tokio::time::timeout(tokio::time::Duration::from_secs(60), async { run().await }).await;
+
+        if result.is_err() {
+            panic!("timed out waiting for a filter");
+        }
+    }
+
+    async fn run() -> Result<()> {
+        let p = b"payload";
+        let (mut author, mut subscriber1, announcement_link, transport) =
+            author_subscriber_fixture().await?;
+
+        let branch_1 = "BRANCH_1";
+        let _branch_announcement = author.new_branch("BASE_BRANCH", branch_1).await?;
+        let _keyload_1 = author.send_keyload_for_all_rw(branch_1).await?;
+
+        let branch_2 = "BRANCH_2";
+        let _branch_announcement_2 = author.new_branch("BASE_BRANCH", branch_2).await?;
+        let _keyload_2 = author.send_keyload_for_all_rw(branch_2).await?;
+
+        subscriber1.sync().await?;
+
+        // Send messages into branch 1
+        let mut sent_msgs = vec![];
+        for _ in 0..5 {
+            let packet = subscriber1.send_signed_packet(branch_1, &p, &p).await?;
+            sent_msgs.push(packet.address());
+        }
+
+        // Send messages into branch 2
+        for _ in 0..3 {
+            let packet = subscriber1.send_signed_packet(branch_2, &p, &p).await?;
+            sent_msgs.push(packet.address());
+        }
+
+        // Fetch the messages in order of branch 1 and then branch 2
+        let mut msgs = vec![];
+        let mut branch_1_message_filter = author.filtered_messages(branch_1);
+        for _ in 0..5 {
+            match branch_1_message_filter.next().await {
+                Some(Ok(msg)) => match msg.as_signed_packet() {
+                    Some(_) => msgs.push(msg.address),
+                    None => panic!("Message should be a signed packet"),
+                },
+                _ => panic!("Should be able to find filtered messages for branch 1"),
+            }
+        }
+        drop(branch_1_message_filter);
+
+        let mut branch_2_message_filter = author.filtered_messages(branch_2);
+        for _ in 0..3 {
+            match branch_2_message_filter.next().await {
+                Some(Ok(msg)) => match msg.as_signed_packet() {
+                    Some(_) => msgs.push(msg.address),
+                    None => panic!("Message should be a signed packet"),
+                },
+                _ => panic!("Should be able to find filtered messages for branch 1"),
+            }
+        }
+        drop(branch_2_message_filter);
+
+        // Compare sent and received messages, the orders should be the same if fetched via filter
+        assert_eq!(msgs, sent_msgs);
+
+        // Load up a second subscriber and sync the base branch
+        let mut subscriber2 =
+            subscriber_fixture("subscriber2", &mut author, announcement_link, transport).await?;
+        let synced = subscriber2.sync_base_branch().await?;
+        assert_eq!(synced, 2);
 
         Ok(())
     }

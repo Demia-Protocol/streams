@@ -52,13 +52,8 @@ mod message;
 mod api;
 
 pub use api::{
-    message::*,
-    message_builder::MessageBuilder,
-    messages::Messages,
-    selector::Selector,
-    send_response::SendResponse,
-    user::User,
-    user_builder::UserBuilder,
+    message::*, message_builder::MessageBuilder, messages::Messages, selector::Selector,
+    send_response::SendResponse, user::User, user_builder::UserBuilder,
 };
 
 /// Errors for Streams
