@@ -1,6 +1,6 @@
 // Rust
 use core::hash::Hash;
-use std::error::Error;
+use std::error::Error as _;
 // IOTA
 use identity_demia::{
     demia::{DemiaDID, DemiaDocument, IotaIdentityClientExt},
