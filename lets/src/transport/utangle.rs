@@ -150,7 +150,8 @@ where
             .header("Content-Type", "application/json")
             .body(message_bytes)
             .send()
-            .await?
+            .await
+            .inspect_err(|e| eprintln!("error sending block: {}", e))?
             .json()
             .await?;
         Ok(response)

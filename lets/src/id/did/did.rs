@@ -1,6 +1,6 @@
 // Rust
 use core::hash::Hash;
-
+use std::error::Error;
 // IOTA
 use identity_demia::{
     demia::{DemiaDID, DemiaDocument, IotaIdentityClientExt},
@@ -39,7 +39,10 @@ pub(crate) async fn resolve_document(url_info: &DIDUrlInfo) -> Result<DemiaDocum
     let doc = client
         .resolve_did(&did_url)
         .await
-        .map_err(|e| Error::did("read DID document", e))?;
+        .map_err(|e| {
+            eprintln!("DID resolution failure: {:?}, Source: {:?}", e, e.source());
+            Error::did("read DID document", e)
+        })?;
     Ok(doc)
 }
 

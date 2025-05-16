@@ -414,7 +414,7 @@ where
                 let stronghold = did.info_mut().url_info_mut().stronghold().map_err(|e| {
                     SpongosError::Context("retrieving stronghold adapter", e.to_string())
                 })?;
-                let mut lock = stronghold.write().await;
+                let mut lock = stronghold.read().await;
                 let _ = lock.read_stronghold_snapshot().await;
                 let data = lock
                     .x25519_decrypt(location, data)
