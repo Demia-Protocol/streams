@@ -353,6 +353,16 @@ impl<T> User<T> {
         self.state.subscribers.remove(id)
     }
 
+    /// Get a [`Psk`] from state if it exists.
+    pub fn get_psk(&mut self, psk: &PskId) -> Option<&Psk> {
+        self.state.psk_store.get(psk)
+    }
+
+    /// Get all [`Psk`] from state.
+    pub fn psks(&mut self) -> hashbrown::hash_map::Iter<'_, PskId, Psk> {
+        self.state.psk_store.iter()
+    }
+
     /// Store a new [Pre-Shared Key](`Psk`) in state. Returns true if [`Psk`] was not present.
     pub fn add_psk(&mut self, psk: Psk) -> bool {
         self.state.psk_store.insert(psk.to_pskid(), psk).is_none()
