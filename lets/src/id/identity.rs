@@ -47,6 +47,7 @@ use crate::{
     id::identifier::Identifier,
     message::{ContentDecrypt, ContentSign, ContentSignSizeof},
 };
+use crate::id::cache::IdentityCache;
 
 /// Wrapper around [`Identifier`], specifying which type of [`Identity`] is being used. An
 /// [`Identity`] is the foundation of message sending and verification.
@@ -202,8 +203,7 @@ impl IdentityKind {
 
                 let lock = stronghold.read().await;
                 // update stronghold snapshot
-                let _ = lock.read_stronghold_snapshot().await;
-
+                
                 let location = Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
                 let sig = lock
                     .ed25519_sign(location, data)
@@ -360,8 +360,7 @@ where
 
                         let lock = stronghold.read().await;
                         // update stronghold snapshot
-                        let _ = lock.read_stronghold_snapshot().await;
-
+                        
                         let location =
                             Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
                         let sig = lock
@@ -378,9 +377,11 @@ where
     }
 }
 
+
+#[cfg(not(feature = "did"))]
 #[async_trait]
-impl<IS, F> ContentDecrypt<IdentityKind> for unwrap::Context<IS, F>
-where
+impl<IS, F> ContentDecrypt<IdentityKind> for wrap::Context<IS, F>
+where 
     F: PRP + Send,
     IS: io::IStream + Send,
 {
@@ -388,6 +389,26 @@ where
         &mut self,
         recipient: &mut IdentityKind,
         key: &mut [u8],
+    ) -> SpongosResult<&mut Self> {
+        match recipient {
+            IdentityKind::Ed25519(kp) => self.x25519(&kp.to_x25519(), NBytes::new(key)),
+        }
+    }
+}
+
+#[cfg(feature = "did")]
+#[async_trait]
+impl<IS, F, C> ContentDecrypt<IdentityKind, C> for unwrap::Context<IS, F>
+where
+    F: PRP + Send,
+    IS: io::IStream + Send,
+    C: IdentityCache + Send + Sync,
+{
+    async fn decrypt(
+        &mut self,
+        recipient: &mut IdentityKind,
+        key: &mut [u8],
+        cache: &mut C,
     ) -> SpongosResult<&mut Self> {
         // TODO: Replace with separate logic for EdPubKey and DID instances (pending Identity xkey
         // introduction)
@@ -407,15 +428,14 @@ where
                     .mask(NBytes::new(&mut ciphertext))?;
 
                 let data = EncryptedData::new(pk, nonce, tag, ciphertext);
-                let method = get_exchange_method(did.info().url_info()).await?;
+                let method = get_exchange_method(did.info().url_info(), cache).await?;
 
                 // Perform stronghold AEAD decryption
                 let location = Location::generic(STREAMS_VAULT, method.id().to_string());
                 let stronghold = did.info_mut().url_info_mut().stronghold().map_err(|e| {
                     SpongosError::Context("retrieving stronghold adapter", e.to_string())
                 })?;
-                let mut lock = stronghold.write().await;
-                let _ = lock.read_stronghold_snapshot().await;
+                let lock = stronghold.read().await;
                 let data = lock
                     .x25519_decrypt(location, data)
                     .await

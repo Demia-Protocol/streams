@@ -25,6 +25,7 @@ use lets::{
         ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
     },
 };
+use lets::id::did::IdentityDocCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Commit, Join, Mask},
@@ -90,6 +91,9 @@ pub(crate) struct Unwrap<'a> {
     initial_state: &'a mut Spongos,
     /// The [`Identifier`] of the subscriber
     subscriber_id: Identifier,
+    #[cfg(feature = "did")]
+    /// A cache for DID documents
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -97,10 +101,15 @@ impl<'a> Unwrap<'a> {
     ///
     /// # Arguments:
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
-    pub(crate) fn new(initial_state: &'a mut Spongos) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        #[cfg(feature = "did")] 
+        cache: IdentityDocCache,
+    ) -> Self {
         Self {
             initial_state,
             subscriber_id: Identifier::default(),
+            cache
         }
     }
 
@@ -124,7 +133,7 @@ where
         self.join(unsubscription.initial_state)?
             .mask(&mut unsubscription.subscriber_id)?
             .commit()?
-            .verify(&unsubscription.subscriber_id)
+            .verify(&unsubscription.subscriber_id, &mut unsubscription.cache)
             .await?;
         Ok(self)
     }

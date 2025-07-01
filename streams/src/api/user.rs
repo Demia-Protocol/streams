@@ -41,7 +41,7 @@ use lets::id::{
     did::{StrongholdSecretManager, DID},
     IdentityKind,
 };
-
+use lets::id::did::IdentityDocCache;
 // Local
 use crate::{
     api::{
@@ -113,6 +113,10 @@ pub(crate) struct State {
 
     /// List of known branch topics.
     pub(crate) topics: HashSet<Topic>,
+    
+    #[cfg(feature = "did")]
+    #[serde(skip)]
+    pub(crate) identity_doc_cache: IdentityDocCache
 }
 
 /// Public `API` Client for participation in a `Streams` channel.
@@ -164,6 +168,8 @@ impl<T> User<T> {
                 base_branch: Default::default(),
                 lean,
                 topics: Default::default(),
+                #[cfg(feature = "did")]
+                identity_doc_cache: IdentityDocCache::default(),
             },
         }
     }

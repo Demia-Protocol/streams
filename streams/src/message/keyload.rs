@@ -47,6 +47,7 @@ use lets::{
         ContentVerify,
     },
 };
+use lets::id::did::IdentityDocCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Absorb, Commit, Fork, Join, Mask},
@@ -81,6 +82,9 @@ pub(crate) struct Wrap<'a, 'b, Subscribers, Psks> {
     // subscribers need a different lifetime because they are provided directly from downstream. They are not stored by
     // the user instance thus they don't share its lifetime
     subscribers_lifetime: PhantomData<&'b Identifier>,
+    #[cfg(feature = "did")]
+    /// A cache for DID documents
+    cache: IdentityDocCache,
 }
 
 impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
@@ -101,6 +105,8 @@ impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
         key: [u8; KEY_SIZE],
         nonce: [u8; NONCE_SIZE],
         author_id: &'a mut Identity,
+        #[cfg(feature = "did")] 
+        cache: IdentityDocCache,
     ) -> Self
     where
         Subscribers: IntoIterator<Item = Permissioned<Identifier>>,
@@ -116,6 +122,7 @@ impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
             nonce,
             author_id,
             subscribers_lifetime: PhantomData,
+            cache
         }
     }
 }
@@ -258,6 +265,7 @@ where
                         keyload.author_id.identity_kind(),
                         subscriber.identifier_mut(),
                         &keyload.key,
+                        &mut keyload.cache
                     )
                     .await?;
             }
@@ -271,6 +279,7 @@ where
                         keyload.author_id.identity_kind(),
                         subscriber.identifier_mut(),
                         &keyload.key,
+                        &mut keyload.cache
                     )
                     .await?;
             }
@@ -307,6 +316,9 @@ pub(crate) struct Unwrap<'a> {
     author_id: &'a Identifier,
     /// The [`Identity`] of the reader
     user_id: Option<&'a mut Identity>,
+    #[cfg(feature = "did")]
+    /// A cache for DID documents
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -321,6 +333,8 @@ impl<'a> Unwrap<'a> {
         user_id: Option<&'a mut Identity>,
         author_id: &'a Identifier,
         psk_store: &'a HashMap<PskId, Psk>,
+        #[cfg(feature = "did")] 
+        cache: IdentityDocCache,
     ) -> Self {
         Self {
             initial_state,
@@ -329,6 +343,7 @@ impl<'a> Unwrap<'a> {
             psk_store,
             author_id,
             user_id,
+            cache
         }
     }
 
@@ -370,12 +385,14 @@ where
             let mut n_ed_subscribers = Size::default();
 
             self.absorb(&mut n_did_subscribers)?;
+            let mut cache = keyload.cache.clone();
             unwrap_subscribers(
                 self,
                 keyload,
                 n_did_subscribers,
                 &mut key,
                 SubscriberKind::DID,
+                &mut cache,
             )
             .await?;
 
@@ -386,6 +403,7 @@ where
                 n_ed_subscribers,
                 &mut key,
                 SubscriberKind::Ed25519,
+                &mut cache,
             )
             .await?;
         }
@@ -417,7 +435,7 @@ where
 
         if let Some(key) = key {
             self.absorb(External::new(&NBytes::new(&key)))?
-                .verify(keyload.author_id)
+                .verify(keyload.author_id, &mut keyload.cache)
                 .await?;
         }
         self.commit()?;
@@ -437,6 +455,8 @@ async fn unwrap_subscribers<IS: io::IStream>(
     num_subscribers: Size,
     key: &mut Option<[u8; KEY_SIZE]>,
     kind: SubscriberKind,
+    #[cfg(feature = "did")]
+    cache: &mut IdentityDocCache
 ) -> Result<()> {
     let drop_len = match kind {
         SubscriberKind::Ed25519 => KEY_SIZE + x25519::PUBLIC_KEY_LENGTH,
@@ -454,8 +474,15 @@ async fn unwrap_subscribers<IS: io::IStream>(
             // Can unwrap if user_id is some
             let user_id = keyload.user_id.as_mut().unwrap();
             if subscriber_id.identifier() == user_id.identifier() {
-                fork.decrypt(user_id.identity_kind(), key.get_or_insert([0u8; KEY_SIZE]))
+                #[cfg(not(feature = "did"))]
+                fork.decrypt(user_id.identity_kind(), key.get_or_insert([0u8; KEY_SIZE]), cache)
                     .await?;
+                #[cfg(feature = "did")]
+                fork.decrypt(
+                    user_id.identity_kind(),
+                    key.get_or_insert([0u8; KEY_SIZE]),
+                    cache,
+                ).await?;
             } else {
                 fork.drop(drop_len)?;
             }

@@ -16,3 +16,4 @@ pub use psk::{Psk, PskId};
 /// Iota Identity functions and types
 #[cfg(feature = "did")]
 pub mod did;
+pub mod cache;

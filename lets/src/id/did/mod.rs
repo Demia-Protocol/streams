@@ -4,7 +4,7 @@ mod did;
 mod url_info;
 ///
 //mod keypair;
-pub use did::{DIDInfo, DID};
+pub use did::{DIDInfo, DID, IdentityDocCache};
 pub use url_info::DIDUrlInfo;
 //pub use keypair::{KeyPair};
 
