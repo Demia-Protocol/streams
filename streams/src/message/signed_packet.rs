@@ -24,13 +24,14 @@ use async_trait::async_trait;
 // IOTA
 
 // Streams
+#[cfg(feature = "did")]
+use lets::id::did::IdentityDocCache;
 use lets::{
     id::{Identifier, Identity},
     message::{
         ContentSign, ContentSignSizeof, ContentSizeof, ContentUnwrap, ContentVerify, ContentWrap,
     },
 };
-use lets::id::did::IdentityDocCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Absorb, Join, Mask},
@@ -118,7 +119,7 @@ pub(crate) struct Unwrap<'a> {
     /// The [`Identifier`] of the publisher
     publisher_id: Identifier,
     #[cfg(feature = "did")]
-    cache: IdentityDocCache
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -128,8 +129,7 @@ impl<'a> Unwrap<'a> {
     /// * `initial_state`: The base [`Spongos`] state that the message will be joined to
     pub(crate) fn new(
         initial_state: &'a mut Spongos,
-        #[cfg(feature = "did")] 
-        cache: IdentityDocCache
+        #[cfg(feature = "did")] cache: IdentityDocCache,
     ) -> Self {
         Self {
             initial_state,
@@ -137,7 +137,7 @@ impl<'a> Unwrap<'a> {
             masked_payload: Default::default(),
             publisher_id: Identifier::default(),
             #[cfg(feature = "did")]
-            cache
+            cache,
         }
     }
 
@@ -167,7 +167,7 @@ where
             .mask(&mut signed_packet.publisher_id)?
             .absorb(Bytes::new(&mut signed_packet.public_payload))?
             .mask(Bytes::new(&mut signed_packet.masked_payload))?
-            .verify(&signed_packet.publisher_id, &mut signed_packet.cache)
+            .verify(&signed_packet.publisher_id, #[cfg(feature = "did")] &mut signed_packet.cache)
             .await?;
         Ok(self)
     }

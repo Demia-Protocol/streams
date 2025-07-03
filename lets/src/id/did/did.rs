@@ -2,7 +2,7 @@ use core::fmt::Debug;
 // Rust
 use core::hash::Hash;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 // IOTA
 use identity_demia::{
     demia::{DemiaDID, DemiaDocument, IotaIdentityClientExt},
@@ -20,19 +20,22 @@ use spongos::{
     PRP,
 };
 
+use crate::id::cache::IdentityCache;
 use crate::{
     alloc::string::ToString,
     error::{Error, Result},
     id::did::DIDUrlInfo,
 };
-use crate::id::cache::IdentityCache;
 
 /// Fetch the `DID` document from the tangle
 ///
 /// # Arguments
 /// * `url_info`: The document details
 /// * `cache`: The cache to use for storing and retrieving documents
-pub(crate) async fn resolve_document<C: IdentityCache>(url_info: &DIDUrlInfo, cache: &mut C) -> Result<DemiaDocument> {
+pub(crate) async fn resolve_document<C: IdentityCache>(
+    url_info: &DIDUrlInfo,
+    cache: &mut C,
+) -> Result<DemiaDocument> {
     let did_url = DemiaDID::parse(url_info.did()).map_err(|e| Error::did("parse did url", e))?;
     if let Some(doc) = cache.get_did_document(&did_url).await {
         Ok(doc.clone())
@@ -52,7 +55,10 @@ pub(crate) async fn resolve_document<C: IdentityCache>(url_info: &DIDUrlInfo, ca
     }
 }
 
-pub(crate) async fn get_exchange_method<C: IdentityCache>(info: &DIDUrlInfo, cache: &mut C) -> SpongosResult<VerificationMethod> {
+pub(crate) async fn get_exchange_method<C: IdentityCache>(
+    info: &DIDUrlInfo,
+    cache: &mut C,
+) -> SpongosResult<VerificationMethod> {
     let exchange_fragment = info.exchange_fragment().to_string();
     let doc = resolve_document(info, cache)
         .await
@@ -166,18 +172,18 @@ impl IdentityCache for IdentityDocCache {
     async fn get_did_document(&self, did: &DemiaDID) -> Option<DemiaDocument> {
         self.docs.read().await.get(&did).map(|doc| doc.clone())
     }
-    
+
     async fn set_did_document(&mut self, did: DemiaDID, doc: DemiaDocument) {
         let _ = self.docs.write().await.insert(did, doc);
     }
-    
+
     async fn size(&self) -> usize {
         self.docs.read().await.len()
     }
 }
 
 impl PartialEq for IdentityDocCache {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
@@ -195,7 +201,6 @@ impl Debug for IdentityDocCache {
         f.write_str("IdentityDocCache")
     }
 }
-
 
 /*
 /// Wrapper for a `DID` based KeyPair

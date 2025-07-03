@@ -192,7 +192,8 @@ where
         if changed {
             // lost permission
         }
-        
+
+        #[cfg(feature = "did")]
         let cache = self.state.identity_doc_cache.clone();
 
         // Unwrap message
@@ -208,7 +209,7 @@ where
                 return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
-        let signed_packet = signed_packet::Unwrap::new(&mut linked_msg_spongos, cache);
+        let signed_packet = signed_packet::Unwrap::new(&mut linked_msg_spongos, #[cfg(feature = "did")]  cache);
         let (message, spongos) = preparsed
             .unwrap(signed_packet)
             .await

@@ -55,6 +55,7 @@ serde_json = {version = "1", default-features = false, optional = true}
 [dev-dependencies]
 dotenv = {version = "0.15.0", default-features = false}
 hex = {version = "0.4.3", default-features = false}
+tokio = {version = "1.15", default-features = false}
 
 isocountry = { version = "0.3" }
 identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch="develop-demia", features = ["iota-client"]}
@@ -62,7 +63,7 @@ iota_stronghold = { git = "https://github.com/demia-protocol/stronghold.rs", bra
 iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch="develop-demia", features = ["tls", "stronghold"] }
 
 rand = {version = "0.8.5", default-features = false, features = ["std", "std_rng"]}
-lets = {path = "../lets", features = ["tangle-client"]}
+lets = {path = "../lets", features = ["tangle-client", "bucket"]}
 textwrap = {version = "0.15.0", default-features = false}
 
 [[example]]

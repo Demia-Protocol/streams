@@ -18,6 +18,7 @@ use crate::{
 };
 
 // Streams
+use crate::id::cache::IdentityCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Mask},
@@ -27,7 +28,6 @@ use spongos::{
     error::{Error as SpongosError, Result as SpongosResult},
     PRP,
 };
-use crate::id::cache::IdentityCache;
 
 /// `DID` Document details
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

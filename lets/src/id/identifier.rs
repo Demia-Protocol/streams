@@ -49,12 +49,15 @@ use crate::{
     },
 };
 
+#[cfg(feature = "did")]
+use crate::{
+    id::{cache::IdentityCache, did::IdentityDocCache}
+};
+
 use crate::{
     error::Result,
     message::{ContentEncrypt, ContentEncryptSizeOf, ContentVerify},
 };
-use crate::id::cache::IdentityCache;
-use crate::id::did::IdentityDocCache;
 
 /// User Identification types
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -358,7 +361,7 @@ where
                                 verifier.to_string(),
                                 "Fragment bytes cant be converted to string".to_string()
                             )
-                                .to_string()
+                            .to_string()
                         ))?
                     );
 

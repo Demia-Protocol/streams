@@ -34,7 +34,7 @@ where
             Utc::now().timestamp_millis() as usize,
         ),
     );
-    client.send_message(address, msg).await?;
+    //client.send_message(address, msg).await?;
     Ok(())
 }
 
@@ -74,7 +74,7 @@ fn bench_clients(c: &mut Criterion) {
 struct Ignore {}
 
 impl TryFrom<Message> for Ignore {
-    type Error = create::error::Error;
+    type Error = crate::error::Error;
     fn try_from(_: Message) -> Result<Self, Self::Error> {
         Ok(Ignore {})
     }

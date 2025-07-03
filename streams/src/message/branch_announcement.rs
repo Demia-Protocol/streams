@@ -33,7 +33,9 @@ use lets::{
         Topic,
     },
 };
+#[cfg(feature = "did")]
 use lets::id::did::IdentityDocCache;
+
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Commit, Join, Mask},
@@ -121,8 +123,7 @@ impl<'a> Unwrap<'a> {
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
     pub(crate) fn new(
         initial_state: &'a mut Spongos,
-        #[cfg(feature = "did")]
-        cache: IdentityDocCache,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
     ) -> Self {
         Self {
             initial_state,
@@ -153,7 +154,7 @@ where
         self.join(announcement.initial_state)?
             .mask(&mut author_id)?
             .mask(&mut announcement.new_topic)?
-            .verify(&author_id, &mut announcement.cache)
+            .verify(&author_id, #[cfg(feature = "did")] &mut announcement.cache)
             .await?
             .commit()?;
         Ok(self)

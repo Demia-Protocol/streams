@@ -150,7 +150,8 @@ where
                 "send a keyload",
             ));
         }
-        
+
+        #[cfg(feature = "did")] 
         let cache = self.state.identity_doc_cache.clone();
 
         // Link message to edge of branch
@@ -196,7 +197,7 @@ where
             encryption_key,
             nonce,
             user_id,
-            cache,
+            #[cfg(feature = "did")] cache,
         ));
         let header = HDF::new(
             message_types::KEYLOAD,
@@ -303,6 +304,7 @@ where
             .collect();
 
         let user_id = self.state.user_id.as_mut();
+        #[cfg(feature = "did")] 
         let cache = self.state.identity_doc_cache.clone();
 
         // Retrieve public key and signature for Message return
@@ -315,7 +317,7 @@ where
             user_id,
             author_identifier,
             &self.state.psk_store,
-            cache
+            #[cfg(feature = "did")] cache,
         );
         let (message, spongos) = preparsed
             .unwrap(keyload)

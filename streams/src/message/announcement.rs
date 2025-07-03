@@ -130,19 +130,11 @@ where
         #[cfg(feature = "did")]
         let mut cache = lets::id::did::IdentityDocCache::default();
         
-        let mut ctx = self.mask(&mut announcement.author_id)?
-            .mask(&mut announcement.topic)?;
-        
-        #[cfg(not(feature = "did"))]
-        {
-            ctx = ctx.verify(&announcement.author_id).await?;
-        }
-        #[cfg(feature = "did")]
-        {
-            ctx = ctx.verify(&announcement.author_id, &mut cache).await?;
-        }
-        
-        ctx.commit()?;
+        self.mask(&mut announcement.author_id)?
+            .mask(&mut announcement.topic)?
+            .verify(&announcement.author_id, #[cfg(feature = "did")] &mut cache)
+            .await?
+            .commit()?;
         Ok(self)
     }
 }

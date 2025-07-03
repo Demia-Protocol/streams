@@ -235,6 +235,7 @@ where
         // Retrieve public key and signature for Message return
         let pk = preparsed.transport_msg().pk().clone();
         let sig = preparsed.transport_msg().sig().clone();
+        #[cfg(feature = "did")] 
         let cache = self.state.identity_doc_cache.clone();
         // Unwrap message
         let linked_msg_address = preparsed
@@ -249,7 +250,7 @@ where
                 return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
-        let branch_announcement = branch_announcement::Unwrap::new(&mut linked_msg_spongos, cache);
+        let branch_announcement = branch_announcement::Unwrap::new(&mut linked_msg_spongos, #[cfg(feature = "did")]  cache);
         let (message, spongos) = preparsed
             .unwrap(branch_announcement)
             .await

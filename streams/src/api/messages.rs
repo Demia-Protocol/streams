@@ -276,7 +276,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
 
     fn reset_stack(&mut self) {
         self.successful_round = false;
-        let filter = self.filter.clone();
+        let filter = self.filter;
         self.ids_stack = self
             .user
             .cursors()
@@ -468,11 +468,11 @@ mod tests {
         let timestamp_6 = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)
             .expect("Failed to get system time")
-            .as_secs() as u64;
+            .as_secs();
 
         for i in 0..3 {
             std::thread::sleep(core::time::Duration::from_secs(1));
-            let p = format!("payload{}", i);
+            let p = format!("payload{i}");
             author
                 .send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes())
                 .await?;
@@ -482,14 +482,14 @@ mod tests {
         let timestamp_3 = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)
             .expect("Failed to get system time")
-            .as_secs() as u64;
+            .as_secs();
 
         subscriber1.sync().await?;
         let backup = subscriber1.backup("messages_fetch_backwards").await?;
 
         for i in 3..6 {
             std::thread::sleep(core::time::Duration::from_secs(1));
-            let p = format!("payload{}", i);
+            let p = format!("payload{i}");
             let _packet = author
                 .send_signed_packet(branch_1, &p.as_bytes(), &p.as_bytes())
                 .await?;
@@ -536,7 +536,7 @@ mod tests {
                 .await?;
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
-                let p = format!("payload{}", amount);
+                let p = format!("payload{amount}");
                 assert!(msg.header().timestamp as u64 > timestamp_6);
                 assert_eq!(p.as_bytes(), msg.as_signed_packet().unwrap().masked_payload);
                 amount += 1;
@@ -583,7 +583,7 @@ mod tests {
                 .await?;
             let mut amount = 0;
             while let Some(Ok(msg)) = messages.next().await {
-                let p = format!("payload{}", amount);
+                let p = format!("payload{amount}");
                 assert!(msg.header().timestamp as u64 > timestamp_6);
                 assert_eq!(p.as_bytes(), msg.as_signed_packet().unwrap().masked_payload);
                 amount += 1;

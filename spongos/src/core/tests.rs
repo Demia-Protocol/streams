@@ -7,7 +7,7 @@ use super::{
 
 fn bytes_spongosn<F: PRP + Default>(n: usize) {
     let mut rng = Spongos::<F>::init();
-    rng.absorb(&vec![0; 10]);
+    rng.absorb(vec![0; 10]);
     rng.commit();
     let mut k = vec![0; n];
     let mut p = vec![0; n];
@@ -42,8 +42,8 @@ fn bytes_spongosn<F: PRP + Default>(n: usize) {
     assert!(s.squeeze_eq(&t2));
     assert!(s.squeeze_eq(&t3));
 
-    assert!(x == z, "{}: x != D(E(x))", n);
-    assert!(t == u, "{}: MAC(x) != MAC(D(E(x)))", n);
+    assert_eq!(x, z, "{n}: x != D(E(x))");
+    assert_eq!(t, u, "{n}: MAC(x) != MAC(D(E(x)))");
 }
 
 fn slice_spongosn<F: PRP + Default>(n: usize) {
@@ -83,8 +83,8 @@ fn slice_spongosn<F: PRP + Default>(n: usize) {
     assert!(s.squeeze_eq(&t23[..n]));
     assert!(s.squeeze_eq(&t23[n..]));
 
-    assert!(x == z, "{}: x != D(E(x))", n);
-    assert!(t == u, "{}: MAC(x) != MAC(D(E(x)))", n);
+    assert!(x == z, "{n}: x != D(E(x))");
+    assert!(t == u, "{n}: MAC(x) != MAC(D(E(x)))");
 }
 
 #[test]
@@ -127,7 +127,7 @@ fn slices_with_size_boundary_cases() {
 
 fn encrypt_decrypt_n<F: PRP + Default + Clone>(n: usize) {
     let mut s = Spongos::<F>::init();
-    s.absorb(&vec![1; 32]);
+    s.absorb(vec![1; 32]);
     s.commit();
 
     let mut x = vec![0; n];

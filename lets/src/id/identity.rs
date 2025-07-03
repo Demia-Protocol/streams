@@ -40,14 +40,13 @@ use crate::id::{ed25519::Ed25519, Ed25519Sig};
 use crate::{
     alloc::string::ToString,
     error::Error,
-    id::did::{get_exchange_method, DID, STREAMS_VAULT},
+    id::{cache::IdentityCache, did::{get_exchange_method, DID, STREAMS_VAULT}},
 };
 
 use crate::{
     id::identifier::Identifier,
     message::{ContentDecrypt, ContentSign, ContentSignSizeof},
 };
-use crate::id::cache::IdentityCache;
 
 /// Wrapper around [`Identifier`], specifying which type of [`Identity`] is being used. An
 /// [`Identity`] is the foundation of message sending and verification.
@@ -203,7 +202,7 @@ impl IdentityKind {
 
                 let lock = stronghold.read().await;
                 // update stronghold snapshot
-                
+
                 let location = Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
                 let sig = lock
                     .ed25519_sign(location, data)
@@ -360,7 +359,7 @@ where
 
                         let lock = stronghold.read().await;
                         // update stronghold snapshot
-                        
+
                         let location =
                             Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
                         let sig = lock
@@ -377,11 +376,10 @@ where
     }
 }
 
-
 #[cfg(not(feature = "did"))]
 #[async_trait]
-impl<IS, F> ContentDecrypt<IdentityKind> for wrap::Context<IS, F>
-where 
+impl<IS, F> ContentDecrypt<IdentityKind> for unwrap::Context<IS, F>
+where
     F: PRP + Send,
     IS: io::IStream + Send,
 {

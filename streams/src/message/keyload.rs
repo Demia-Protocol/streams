@@ -39,7 +39,7 @@ use hashbrown::HashMap;
 
 // Streams
 #[cfg(feature = "did")]
-use lets::id::did::DID_ENCRYPTED_DATA_SIZE;
+use lets::id::did::{DID_ENCRYPTED_DATA_SIZE, IdentityDocCache};
 use lets::{
     id::{Identifier, Identity, Permissioned, Psk, PskId},
     message::{
@@ -47,7 +47,6 @@ use lets::{
         ContentVerify,
     },
 };
-use lets::id::did::IdentityDocCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Absorb, Commit, Fork, Join, Mask},
@@ -105,8 +104,7 @@ impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
         key: [u8; KEY_SIZE],
         nonce: [u8; NONCE_SIZE],
         author_id: &'a mut Identity,
-        #[cfg(feature = "did")] 
-        cache: IdentityDocCache,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
     ) -> Self
     where
         Subscribers: IntoIterator<Item = Permissioned<Identifier>>,
@@ -122,7 +120,8 @@ impl<'a, Subscribers, Psks> Wrap<'a, '_, Subscribers, Psks> {
             nonce,
             author_id,
             subscribers_lifetime: PhantomData,
-            cache
+            #[cfg(feature = "did")] 
+            cache,
         }
     }
 }
@@ -265,7 +264,7 @@ where
                         keyload.author_id.identity_kind(),
                         subscriber.identifier_mut(),
                         &keyload.key,
-                        &mut keyload.cache
+                        &mut keyload.cache,
                     )
                     .await?;
             }
@@ -279,7 +278,7 @@ where
                         keyload.author_id.identity_kind(),
                         subscriber.identifier_mut(),
                         &keyload.key,
-                        &mut keyload.cache
+                        &mut keyload.cache,
                     )
                     .await?;
             }
@@ -343,7 +342,8 @@ impl<'a> Unwrap<'a> {
             psk_store,
             author_id,
             user_id,
-            cache
+            #[cfg(feature = "did")]
+            cache,
         }
     }
 
@@ -435,7 +435,7 @@ where
 
         if let Some(key) = key {
             self.absorb(External::new(&NBytes::new(&key)))?
-                .verify(keyload.author_id, &mut keyload.cache)
+                .verify(keyload.author_id, #[cfg(feature = "did")] &mut keyload.cache)
                 .await?;
         }
         self.commit()?;
@@ -455,8 +455,7 @@ async fn unwrap_subscribers<IS: io::IStream>(
     num_subscribers: Size,
     key: &mut Option<[u8; KEY_SIZE]>,
     kind: SubscriberKind,
-    #[cfg(feature = "did")]
-    cache: &mut IdentityDocCache
+    #[cfg(feature = "did")] cache: &mut IdentityDocCache,
 ) -> Result<()> {
     let drop_len = match kind {
         SubscriberKind::Ed25519 => KEY_SIZE + x25519::PUBLIC_KEY_LENGTH,
@@ -474,15 +473,12 @@ async fn unwrap_subscribers<IS: io::IStream>(
             // Can unwrap if user_id is some
             let user_id = keyload.user_id.as_mut().unwrap();
             if subscriber_id.identifier() == user_id.identifier() {
-                #[cfg(not(feature = "did"))]
-                fork.decrypt(user_id.identity_kind(), key.get_or_insert([0u8; KEY_SIZE]), cache)
-                    .await?;
-                #[cfg(feature = "did")]
                 fork.decrypt(
                     user_id.identity_kind(),
                     key.get_or_insert([0u8; KEY_SIZE]),
-                    cache,
-                ).await?;
+                    #[cfg(feature = "did")] cache
+                )
+                .await?;
             } else {
                 fork.drop(drop_len)?;
             }

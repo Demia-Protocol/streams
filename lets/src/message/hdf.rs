@@ -88,8 +88,7 @@ impl HDF {
     pub fn new(message_type: u8, sequence: usize, publisher: Identifier, topic: &Topic) -> Self {
         debug_assert!(
             message_type >> 4 == 0,
-            "invalid content-type '{}': content-type value cannot be greater than 4 bits",
-            message_type
+            "invalid content-type '{message_type}': content-type value cannot be greater than 4 bits"
         );
         Self {
             encoding: UTF8,

@@ -223,7 +223,7 @@ impl fmt::Debug for InnerCursorStore {
         writeln!(f, "\t* latest link: {}", self.latest_link)?;
         writeln!(f, "\t* cursors:")?;
         for (id, cursor) in self.cursors.iter() {
-            writeln!(f, "\t\t{:?} => {}", id, cursor)?;
+            writeln!(f, "\t\t{id:?} => {cursor}")?;
         }
         Ok(())
     }
@@ -233,7 +233,7 @@ impl fmt::Debug for CursorStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "* branches:")?;
         for (topic, branch) in &self.0 {
-            writeln!(f, "{:?} => \n{:?}", topic, branch)?;
+            writeln!(f, "{topic:?} => \n{branch:?}")?;
         }
         Ok(())
     }
