@@ -112,7 +112,8 @@ where
         // Retrieve public key and signature for Message return
         let pk = preparsed.transport_msg().pk().clone();
         let sig = preparsed.transport_msg().sig().clone();
-
+        #[cfg(feature = "did")]
+        let cache = self.state.identity_doc_cache.clone();
         // Unwrap message
         let linked_msg_address = preparsed
             .header()
@@ -126,7 +127,7 @@ where
                 return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
-        let unsubscription = unsubscription::Unwrap::new(&mut linked_msg_spongos);
+        let unsubscription = unsubscription::Unwrap::new(&mut linked_msg_spongos, #[cfg(feature = "did")]  cache);
         let (message, spongos) = preparsed
             .unwrap(unsubscription)
             .await

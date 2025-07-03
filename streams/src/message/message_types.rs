@@ -91,7 +91,7 @@ mod tests {
             MessageType::try_from(3),
             Ok(MessageType::SignedPacket)
         ));
-        assert!(matches!(MessageType::try_from(7), Err(_)));
+        assert!(MessageType::try_from(7).is_err());
     }
 
     #[test]

@@ -45,6 +45,9 @@ where
             &base_branch,
             SUB_MESSAGE_NUM,
         );
+        
+        #[cfg(feature = "did")]
+        let cache = self.state.identity_doc_cache.clone();
 
         // Prepare HDF and PCF
         // Spongos must be copied because wrapping mutates it
@@ -68,6 +71,7 @@ where
             unsubscribe_key,
             user_id,
             &mut author_identifier,
+            #[cfg(feature = "did")] cache,
         ));
         let header = HDF::new(
             message_types::SUBSCRIPTION,
@@ -122,7 +126,8 @@ where
         // Retrieve public key and signature for Message return
         let pk = preparsed.transport_msg().pk().clone();
         let sig = preparsed.transport_msg().sig().clone();
-
+        #[cfg(feature = "did")]
+        let cache = self.state.identity_doc_cache.clone();
         // Unwrap message
         let linked_msg_address = preparsed
             .header()
@@ -140,7 +145,7 @@ where
             .identity_mut()
             .ok_or(Error::NoIdentity("Derive a secret key"))?;
 
-        let subscription = subscription::Unwrap::new(&mut linked_msg_spongos, user_id);
+        let subscription = subscription::Unwrap::new(&mut linked_msg_spongos, user_id, #[cfg(feature = "did")]  cache);
         let (message, _spongos) = preparsed
             .unwrap(subscription)
             .await

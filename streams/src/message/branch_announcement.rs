@@ -33,6 +33,9 @@ use lets::{
         Topic,
     },
 };
+#[cfg(feature = "did")]
+use lets::id::did::IdentityDocCache;
+
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Commit, Join, Mask},
@@ -108,6 +111,9 @@ pub(crate) struct Unwrap<'a> {
     initial_state: &'a mut Spongos,
     /// The new branch [`Topic`]
     new_topic: Topic,
+    #[cfg(feature = "did")]
+    /// A cache for DID documents
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -115,10 +121,15 @@ impl<'a> Unwrap<'a> {
     ///
     /// # Arguments
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
-    pub(crate) fn new(initial_state: &'a mut Spongos) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
+    ) -> Self {
         Self {
             initial_state,
             new_topic: Topic::default(),
+            #[cfg(feature = "did")]
+            cache,
         }
     }
 
@@ -143,7 +154,7 @@ where
         self.join(announcement.initial_state)?
             .mask(&mut author_id)?
             .mask(&mut announcement.new_topic)?
-            .verify(&author_id)
+            .verify(&author_id, #[cfg(feature = "did")] &mut announcement.cache)
             .await?
             .commit()?;
         Ok(self)

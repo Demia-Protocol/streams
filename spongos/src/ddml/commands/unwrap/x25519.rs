@@ -15,7 +15,7 @@ use crate::{
 /// secret key, computes the Diffie Hellman shared key. That key is then absorbed as an [`External`]
 /// [`NBytes`] object into the [`Context`]. The [`Context`] is committed, and the secret key is then
 /// decrypted from the byte stream.
-impl<'a, F: PRP, T: AsMut<[u8]>, IS: io::IStream> X25519<&'a x25519::SecretKey, NBytes<T>>
+impl<F: PRP, T: AsMut<[u8]>, IS: io::IStream> X25519<&x25519::SecretKey, NBytes<T>>
     for Context<IS, F>
 {
     fn x25519(

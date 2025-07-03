@@ -52,7 +52,7 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(
         .identifier()
         .expect("subscriber A should have identifier")
         .clone();
-    let subscriber_b_id = subscriber_b
+    let _subscriber_b_id = subscriber_b
         .identifier()
         .expect("subscriber B should have identifier")
         .clone();
@@ -75,7 +75,7 @@ pub(crate) async fn example<SR, T: GenericTransport<SR>>(
     print_user("Subscriber A", &subscriber_a);
 
     println!("> Author reads subscription of subscriber A");
-    let subscription_a_as_author = author
+    let _subscription_a_as_author = author
         .receive_message(subscription_a_as_a.address())
         .await?;
     print_user("Author", &author);

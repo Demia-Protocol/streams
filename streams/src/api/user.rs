@@ -38,10 +38,9 @@ use spongos::{
 
 #[cfg(feature = "did")]
 use lets::id::{
-    did::{StrongholdSecretManager, DID},
+    did::{StrongholdSecretManager, DID, IdentityDocCache},
     IdentityKind,
 };
-
 // Local
 use crate::{
     api::{
@@ -113,6 +112,10 @@ pub(crate) struct State {
 
     /// List of known branch topics.
     pub(crate) topics: HashSet<Topic>,
+
+    #[cfg(feature = "did")]
+    #[serde(skip)]
+    pub(crate) identity_doc_cache: IdentityDocCache,
 }
 
 /// Public `API` Client for participation in a `Streams` channel.
@@ -164,6 +167,8 @@ impl<T> User<T> {
                 base_branch: Default::default(),
                 lean,
                 topics: Default::default(),
+                #[cfg(feature = "did")]
+                identity_doc_cache: IdentityDocCache::default(),
             },
         }
     }
@@ -615,7 +620,7 @@ where
     /// Start a [`Messages`] stream to traverse the channel messages
     ///
     /// See the documentation in [`Messages`] for more details and examples.
-    pub fn messages(&mut self) -> Messages<T> {
+    pub fn messages(&mut self) -> Messages<'_, T> {
         Messages::new(self)
     }
 
@@ -652,7 +657,7 @@ where
         &mut self,
         selector: &Selector,
         topic: impl Into<Topic>,
-    ) -> Result<Messages<T>> {
+    ) -> Result<Messages<'_, T>> {
         let topic = topic.into();
         let addr = AppAddr::gen(
             self.state.author_identifier.as_ref().unwrap(),
@@ -809,7 +814,7 @@ where
     }
 
     /// Create a new [`MessageBuilder`] instance.
-    pub fn message<P: Default>(&mut self) -> MessageBuilder<P, T> {
+    pub fn message<P: Default>(&mut self) -> MessageBuilder<'_, P, T> {
         MessageBuilder::new(self)
     }
 
@@ -1059,7 +1064,7 @@ impl<T> Debug for User<T> {
 
         writeln!(f, "* PSKs:")?;
         for pskid in self.state.psk_store.keys() {
-            writeln!(f, "\t<{:?}>", pskid)?;
+            writeln!(f, "\t<{pskid:?}>")?;
         }
 
         write!(f, "* lean: {}", self.state.lean)

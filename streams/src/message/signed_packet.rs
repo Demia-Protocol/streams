@@ -24,6 +24,8 @@ use async_trait::async_trait;
 // IOTA
 
 // Streams
+#[cfg(feature = "did")]
+use lets::id::did::IdentityDocCache;
 use lets::{
     id::{Identifier, Identity},
     message::{
@@ -116,6 +118,8 @@ pub(crate) struct Unwrap<'a> {
     masked_payload: Vec<u8>,
     /// The [`Identifier`] of the publisher
     publisher_id: Identifier,
+    #[cfg(feature = "did")]
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -123,12 +127,17 @@ impl<'a> Unwrap<'a> {
     ///
     /// # Arguments
     /// * `initial_state`: The base [`Spongos`] state that the message will be joined to
-    pub(crate) fn new(initial_state: &'a mut Spongos) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
+    ) -> Self {
         Self {
             initial_state,
             public_payload: Default::default(),
             masked_payload: Default::default(),
             publisher_id: Identifier::default(),
+            #[cfg(feature = "did")]
+            cache,
         }
     }
 
@@ -158,7 +167,7 @@ where
             .mask(&mut signed_packet.publisher_id)?
             .absorb(Bytes::new(&mut signed_packet.public_payload))?
             .mask(Bytes::new(&mut signed_packet.masked_payload))?
-            .verify(&signed_packet.publisher_id)
+            .verify(&signed_packet.publisher_id, #[cfg(feature = "did")] &mut signed_packet.cache)
             .await?;
         Ok(self)
     }

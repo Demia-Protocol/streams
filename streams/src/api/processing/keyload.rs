@@ -151,6 +151,9 @@ where
             ));
         }
 
+        #[cfg(feature = "did")] 
+        let cache = self.state.identity_doc_cache.clone();
+
         // Link message to edge of branch
         let link_to = self
             .get_latest_link(&topic)
@@ -194,6 +197,7 @@ where
             encryption_key,
             nonce,
             user_id,
+            #[cfg(feature = "did")] cache,
         ));
         let header = HDF::new(
             message_types::KEYLOAD,
@@ -300,6 +304,8 @@ where
             .collect();
 
         let user_id = self.state.user_id.as_mut();
+        #[cfg(feature = "did")] 
+        let cache = self.state.identity_doc_cache.clone();
 
         // Retrieve public key and signature for Message return
         let pk = preparsed.transport_msg().pk().clone();
@@ -311,6 +317,7 @@ where
             user_id,
             author_identifier,
             &self.state.psk_store,
+            #[cfg(feature = "did")] cache,
         );
         let (message, spongos) = preparsed
             .unwrap(keyload)

@@ -32,6 +32,8 @@ use async_trait::async_trait;
 // IOTA
 
 // Streams
+#[cfg(feature = "did")]
+use lets::id::did::IdentityDocCache;
 use lets::{
     id::{Identifier, Identity},
     message::{
@@ -58,6 +60,8 @@ pub(crate) struct Wrap<'a> {
     subscriber_id: &'a mut Identity,
     /// The authors [`x25519::PublicKey`]
     author_identifier: &'a mut Identifier,
+    #[cfg(feature = "did")]
+    cache: IdentityDocCache,
 }
 
 impl<'a> Wrap<'a> {
@@ -73,12 +77,15 @@ impl<'a> Wrap<'a> {
         unsubscribe_key: [u8; 32],
         subscriber_id: &'a mut Identity,
         author_identifier: &'a mut Identifier,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
     ) -> Self {
         Self {
             initial_state,
             unsubscribe_key,
             subscriber_id,
             author_identifier,
+            #[cfg(feature = "did")]
+            cache,
         }
     }
 }
@@ -86,13 +93,6 @@ impl<'a> Wrap<'a> {
 #[async_trait]
 impl<'a> ContentSizeof<Wrap<'a>> for sizeof::Context {
     async fn sizeof(&mut self, subscription: &Wrap<'a>) -> Result<&mut Self> {
-        #[cfg(not(feature = "did"))]
-        self.encrypt_sizeof(
-            subscription.author_identifier,
-            &subscription.unsubscribe_key,
-        )
-        .await?;
-        #[cfg(feature = "did")]
         self.encrypt_sizeof(
             subscription.author_identifier,
             &subscription.unsubscribe_key,
@@ -112,21 +112,15 @@ where
     OS: io::OStream,
 {
     async fn wrap(&mut self, subscription: &mut Wrap<'a>) -> Result<&mut Self> {
-        let ctx = self.join(subscription.initial_state)?;
-        #[cfg(not(feature = "did"))]
-        ctx.encrypt(
+        self.join(subscription.initial_state)?
+            .encrypt(
+            #[cfg(feature = "did")] subscription.subscriber_id.identity_kind(),
             subscription.author_identifier,
             &subscription.unsubscribe_key,
-        )
-        .await?;
-        #[cfg(feature = "did")]
-        ctx.encrypt(
-            subscription.subscriber_id.identity_kind(),
-            subscription.author_identifier,
-            &subscription.unsubscribe_key,
-        )
-        .await?;
-        ctx.mask(subscription.subscriber_id.identifier())?
+            #[cfg(feature = "did")] &mut subscription.cache, 
+            )
+            .await?
+            .mask(subscription.subscriber_id.identifier())?
             .sign(subscription.subscriber_id)
             .await?;
         Ok(self)
@@ -143,6 +137,8 @@ pub(crate) struct Unwrap<'a> {
     subscriber_identifier: Identifier,
     /// The author's [`Identity`]
     author_id: &'a mut Identity,
+    #[cfg(feature = "did")]
+    cache: IdentityDocCache,
 }
 
 impl<'a> Unwrap<'a> {
@@ -151,12 +147,18 @@ impl<'a> Unwrap<'a> {
     /// # Arguments:
     /// * `initial_state`: The initial [`Spongos`] state the message will be joined to
     /// * `author_ke_sk`: The author's secret exchange key
-    pub(crate) fn new(initial_state: &'a mut Spongos, author_id: &'a mut Identity) -> Self {
+    pub(crate) fn new(
+        initial_state: &'a mut Spongos,
+        author_id: &'a mut Identity,
+        #[cfg(feature = "did")] cache: IdentityDocCache,
+    ) -> Self {
         Self {
             initial_state,
             unsubscribe_key: Default::default(),
             subscriber_identifier: Default::default(),
             author_id,
+            #[cfg(feature = "did")]
+            cache,
         }
     }
 
@@ -176,6 +178,7 @@ impl<'a, IS> ContentUnwrap<Unwrap<'a>> for unwrap::Context<IS>
 where
     IS: io::IStream + Send,
 {
+    #[cfg(not(feature = "did"))]
     async fn unwrap(&mut self, subscription: &mut Unwrap<'a>) -> Result<&mut Self> {
         let ctx = self.join(subscription.initial_state)?;
         ctx.decrypt(subscription.author_id, &mut subscription.unsubscribe_key)
@@ -183,6 +186,22 @@ where
             .mask(&mut subscription.subscriber_identifier)?
             .verify(&subscription.subscriber_identifier)
             .await?;
+        Ok(self)
+    }
+
+    #[cfg(feature = "did")]
+    async fn unwrap(&mut self, subscription: &mut Unwrap<'a>) -> Result<&mut Self> {
+        let ctx = self.join(subscription.initial_state)?;
+        let mut cache = subscription.cache.clone();
+        ctx.decrypt(
+            subscription.author_id,
+            &mut subscription.unsubscribe_key,
+            &mut cache,
+        )
+        .await?
+        .mask(&mut subscription.subscriber_identifier)?
+        .verify(&subscription.subscriber_identifier, &mut cache)
+        .await?;
         Ok(self)
     }
 }

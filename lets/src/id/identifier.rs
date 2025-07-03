@@ -49,6 +49,11 @@ use crate::{
     },
 };
 
+#[cfg(feature = "did")]
+use crate::{
+    id::{cache::IdentityCache, did::IdentityDocCache}
+};
+
 use crate::{
     error::Result,
     message::{ContentEncrypt, ContentEncryptSizeOf, ContentVerify},
@@ -95,7 +100,8 @@ impl Identifier {
             Identifier::Ed25519(pk) => Ok(*pk),
             #[cfg(feature = "did")]
             Identifier::DID(url_info) => {
-                let doc = resolve_document(url_info).await?;
+                let mut cache = IdentityDocCache::default();
+                let doc = resolve_document(url_info, &mut cache).await?;
                 match doc.resolve_method(url_info.signing_fragment(), None) {
                     Some(sig) => {
                         let mut bytes = [0u8; 32];
@@ -128,7 +134,8 @@ impl Identifier {
                 .expect("failed to convert ed25519 public-key to x25519 public-key")),
             #[cfg(feature = "did")]
             Identifier::DID(url_info) => {
-                let doc = resolve_document(url_info).await?;
+                let mut cache = IdentityDocCache::default();
+                let doc = resolve_document(url_info, &mut cache).await?;
                 match doc.resolve_method(
                     url_info.exchange_fragment(),
                     Some(identity_demia::verification::MethodScope::key_agreement()),
@@ -266,6 +273,7 @@ where
     }
 }
 
+#[cfg(not(feature = "did"))]
 #[async_trait]
 impl<IS, F> ContentVerify<Identifier> for unwrap::Context<IS, F>
 where
@@ -292,14 +300,47 @@ where
                         .ed25519(public_key, hash.as_ref())?;
                     Ok(self)
                 }
-                #[cfg(feature = "did")]
+            },
+            o => Err(SpongosError::InvalidOption("identity", o)),
+        }
+    }
+}
+
+#[cfg(feature = "did")]
+#[async_trait]
+impl<IS, F, C> ContentVerify<Identifier, C> for unwrap::Context<IS, F>
+where
+    F: PRP + Send,
+    IS: io::IStream + Send,
+    C: IdentityCache + Send,
+{
+    /// Verifies the signature of the message based on the type of [`Identifier`] of the signing
+    /// user. If the sender [`Identifier`] is of type [`Identifier::Ed25519`], then the public
+    /// key is used to verify the message signature. If it is of type [`Identifier::DID`], then
+    /// the `DID` document is retrieved and the signature is verified using the appropriately
+    /// tagged `Verification Method`.
+    ///
+    /// # Arguments
+    /// * `verifier`: The [`Identifier`] of the signer.
+    #[cfg(feature = "did")]
+    async fn verify(&mut self, verifier: &Identifier, cache: &mut C) -> SpongosResult<&mut Self> {
+        let mut oneof = Uint8::default();
+        self.absorb(&mut oneof)?;
+        match oneof.inner() {
+            0 => match verifier {
+                Identifier::Ed25519(public_key) => {
+                    let mut hash = External::new(NBytes::new([0; 64]));
+                    self.commit()?
+                        .squeeze(hash.as_mut())?
+                        .ed25519(public_key, hash.as_ref())?;
+                    Ok(self)
+                }
                 o => Err(SpongosError::InvalidAction(
                     "verify data",
                     o.to_string(),
                     verifier.to_string(),
                 )),
             },
-            #[cfg(feature = "did")]
             1 => match verifier {
                 Identifier::DID(url_info) => {
                     let mut hash = [0; 64];
@@ -325,7 +366,7 @@ where
                     );
 
                     url_info
-                        .verify(&signing_fragment, &signature_bytes, &hash)
+                        .verify(&signing_fragment, &signature_bytes, &hash, cache)
                         .await
                         .map_err(|e| SpongosError::Context("ContentVerify", e.to_string()))?;
                     Ok(self)
@@ -386,10 +427,11 @@ where
 
 #[cfg(feature = "did")]
 #[async_trait]
-impl<OS, F> ContentEncrypt<IdentityKind, Identifier> for wrap::Context<OS, F>
+impl<OS, F, C> ContentEncrypt<IdentityKind, Identifier, C> for wrap::Context<OS, F>
 where
     F: PRP,
     OS: io::OStream,
+    C: IdentityCache + Send + Sync,
 {
     #[cfg(feature = "did")]
     async fn encrypt(
@@ -397,14 +439,15 @@ where
         sender: &mut IdentityKind,
         recipient: &mut Identifier,
         key: &[u8],
+        cache: &mut C,
     ) -> SpongosResult<&mut Self> {
         match recipient {
             Identifier::DID(ref mut url_info) => {
                 match sender {
                     IdentityKind::DID(ref mut sender_info) => {
-                        let receiver_method = get_exchange_method(url_info).await?;
+                        let receiver_method = get_exchange_method(url_info, cache).await?;
                         let sender_method =
-                            get_exchange_method(sender_info.info().url_info()).await?;
+                            get_exchange_method(sender_info.info().url_info(), cache).await?;
 
                         //  The location of sender's xkeys in stronghold
                         let sender_location =
@@ -431,7 +474,7 @@ where
 
                         // Create an AEAD Encryption packet to be received and processed by the recipient
                         let encrypted_data = stronghold
-                            .write()
+                            .read()
                             .await
                             .x25519_encrypt(xkey, sender_location, key.to_vec())
                             .await
@@ -443,7 +486,7 @@ where
                             .mask(NBytes::new(&encrypted_data.ciphertext))
                     }
                     IdentityKind::Ed25519(kp) => {
-                        let receiver_method = get_exchange_method(url_info).await?;
+                        let receiver_method = get_exchange_method(url_info, cache).await?;
 
                         let xkey = x25519::PublicKey::try_from_slice(
                             &receiver_method.data().try_decode().map_err(|e| {

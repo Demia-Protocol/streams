@@ -122,7 +122,7 @@ pub enum Error {
 
     #[cfg(any(feature = "tangle-client", feature = "tangle-client-wasm"))]
     #[error("Iota client error for {0}: {1}")]
-    IotaClient(&'static str, iota_sdk::client::Error),
+    IotaClient(&'static str, Box<iota_sdk::client::Error>),
 
     #[cfg(feature = "mysql-client")]
     #[error("MySql client error for {0}: {1}")]

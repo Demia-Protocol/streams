@@ -80,7 +80,7 @@ impl<Message, SendResponse> Client<Message, SendResponse> {
         let network_info_path = "api/core/v2/info";
         let network_info: NetworkInfo = self
             .client
-            .get(format!("{}/{}", self.node_url, network_info_path))
+            .get(format!("{}/{network_info_path}", self.node_url))
             .send()
             .await?
             .json()
@@ -93,7 +93,7 @@ impl<Message, SendResponse> Client<Message, SendResponse> {
         let tips_path = "api/core/v2/tips";
         let tips: Tips = self
             .client
-            .get(format!("{}/{}", self.node_url, tips_path))
+            .get(format!("{}/{tips_path}", self.node_url))
             .send()
             .await?
             .json()
@@ -146,7 +146,7 @@ where
 
         let response: SendResponse = self
             .client
-            .post(format!("{}/{}", self.node_url, path))
+            .post(format!("{}/{path}", self.node_url))
             .header("Content-Type", "application/json")
             .body(message_bytes)
             .send()
@@ -168,7 +168,7 @@ where
         );
         let index_data: BlockResponse = self
             .client
-            .get(format!("{}/{}", self.node_url, path))
+            .get(format!("{}/{path}", self.node_url))
             .send()
             .await?
             .json()

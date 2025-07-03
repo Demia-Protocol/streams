@@ -45,9 +45,16 @@ pub trait ContentSign<T> {
 }
 
 /// Used to authenticate the signature from the `Context` stream
+#[cfg(not(feature = "did"))]
 #[async_trait]
 pub trait ContentVerify<T> {
     async fn verify(&mut self, verifier: &T) -> Result<&mut Self>;
+}
+
+#[cfg(feature="did")]
+#[async_trait]
+pub trait ContentVerify<T, C> {
+    async fn verify(&mut self, verifier: &T, cache: &mut C) -> Result<&mut Self>;
 }
 
 /// Used to determine the encoding size of the encryption operation for a key slice for recipient
@@ -67,13 +74,30 @@ pub trait ContentEncrypt<T> {
 #[cfg(feature = "did")]
 /// Used to encrypt a key slice for recipient `T` using Identity `I`
 #[async_trait]
-pub trait ContentEncrypt<I, T> {
-    async fn encrypt(&mut self, sender: &mut I, recipient: &mut T, key: &[u8])
-        -> Result<&mut Self>;
+pub trait ContentEncrypt<I, T, C> {
+    async fn encrypt(
+        &mut self,
+        sender: &mut I,
+        recipient: &mut T,
+        key: &[u8],
+        cache: &mut C,
+    ) -> Result<&mut Self>;
 }
 
 /// Used to decrypt a key slice for recipient `T`
+#[cfg(not(feature = "did"))]
 #[async_trait]
 pub trait ContentDecrypt<T> {
     async fn decrypt(&mut self, recipient: &mut T, key: &mut [u8]) -> Result<&mut Self>;
+}
+
+#[cfg(feature = "did")]
+#[async_trait]
+pub trait ContentDecrypt<T, C> {
+    async fn decrypt(
+        &mut self,
+        recipient: &mut T,
+        key: &mut [u8],
+        cache: &mut C,
+    ) -> Result<&mut Self>;
 }

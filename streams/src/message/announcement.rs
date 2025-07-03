@@ -127,9 +127,12 @@ where
     IS: io::IStream + Send,
 {
     async fn unwrap(&mut self, announcement: &mut Unwrap) -> Result<&mut Self> {
+        #[cfg(feature = "did")]
+        let mut cache = lets::id::did::IdentityDocCache::default();
+        
         self.mask(&mut announcement.author_id)?
             .mask(&mut announcement.topic)?
-            .verify(&announcement.author_id)
+            .verify(&announcement.author_id, #[cfg(feature = "did")] &mut cache)
             .await?
             .commit()?;
         Ok(self)

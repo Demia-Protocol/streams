@@ -18,6 +18,7 @@ use crate::{
 };
 
 // Streams
+use crate::id::cache::IdentityCache;
 use spongos::{
     ddml::{
         commands::{sizeof, unwrap, wrap, Mask},
@@ -173,13 +174,14 @@ impl DIDUrlInfo {
     /// * `signing_fragment`: Label for exchange key methods
     /// * `signature_bytes`: Raw bytes for signature
     /// * `hash`: Hash value used for signature
-    pub(crate) async fn verify(
+    pub(crate) async fn verify<C: IdentityCache>(
         &self,
         signing_fragment: &str,
         signature_bytes: &[u8],
         hash: &[u8],
+        cache: &mut C,
     ) -> Result<()> {
-        let doc = super::resolve_document(self).await?;
+        let doc = super::resolve_document(self, cache).await?;
         let method = doc.resolve_method(signing_fragment, None).unwrap();
         match method.data() {
             MethodData::PublicKeyMultibase(pk) => {

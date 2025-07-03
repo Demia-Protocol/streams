@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
         // instances, so there is no need to share any more than the original announcement message 
         let message = author.message()
             .with_topic(topic)
-            .with_payload(format!("Message #{}", i))
+            .with_payload(format!("Message #{i}"))
             .signed()
             .send()
             .await?;

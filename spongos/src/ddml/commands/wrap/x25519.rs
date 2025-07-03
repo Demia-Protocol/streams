@@ -21,7 +21,7 @@ use rand::{rngs::StdRng, SeedableRng};
 // X25519 wrap command requires randomly generating an x25519 keypair. Because of that, it can only
 // be compiled on architectures supported by `getrandom`.
 #[cfg(feature = "osrng")]
-impl<'a, F: PRP, T: AsRef<[u8]>, OS: io::OStream> X25519<&'a x25519::PublicKey, NBytes<T>>
+impl<F: PRP, T: AsRef<[u8]>, OS: io::OStream> X25519<&x25519::PublicKey, NBytes<T>>
     for Context<OS, F>
 {
     fn x25519(

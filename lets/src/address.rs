@@ -159,7 +159,6 @@ impl FromStr for Address {
 /// 40 byte Application Instance identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-
 pub struct AppAddr(#[serde(with = "BigArray")] [u8; Self::SIZE]);
 
 impl AppAddr {
@@ -208,7 +207,7 @@ impl FromStr for AppAddr {
 /// Display appaddr with its hexadecimal representation (lower case)
 impl Display for AppAddr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self)
+        write!(f, "{self:x}")
     }
 }
 
@@ -289,7 +288,7 @@ impl FromStr for MsgId {
 /// Display MsgId with its hexadecimal representation (lower case)
 impl Display for MsgId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self)
+        write!(f, "{self:x}")
     }
 }
 
