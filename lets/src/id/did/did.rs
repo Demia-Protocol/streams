@@ -40,8 +40,10 @@ pub(crate) async fn resolve_document<C: IdentityCache>(
     if let Some(doc) = cache.get_did_document(&did_url).await {
         Ok(doc.clone())
     } else {
+        let client_url = std::env::var("DID_CLIENT_URL")
+            .unwrap_or_else(|_| url_info.client_url().to_string());
         let client = DIDClient::builder()
-            .with_primary_node(url_info.client_url(), None)
+            .with_primary_node(&client_url, None)
             .map_err(|e| Error::did("DIDClient set primary node", e))?
             .finish()
             .await
