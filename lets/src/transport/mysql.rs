@@ -6,8 +6,8 @@ use crate::{
     transport::Transport,
 };
 use alloc::vec::Vec;
+use core::marker::PhantomData;
 use async_trait::async_trait;
-use serde::__private::PhantomData;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPool;
 use sqlx::QueryBuilder;
