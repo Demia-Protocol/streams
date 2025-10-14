@@ -42,6 +42,13 @@ impl<SM, DM> Client<SM, DM> {
             PhantomData,
         ))
     }
+
+    pub async fn new_with(pool: MySqlPool) -> Result<Client> {
+        Ok(Client(
+            pool,
+            PhantomData,
+        ))
+    }
 }
 
 impl<SM, DM> Client<SM, DM> {
