@@ -40,13 +40,25 @@ const LN_3: f64 = 1.098_612_288_668_109;
 
 /// A [`Transport`] Client for sending and retrieving binary messages from an `IOTA Tangle` node.
 /// This Client uses a lightweight [reqwest](`reqwest::Client`) Client implementation.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Client<Message = TransportMessage, SendResponse = SentMessageResponse> {
     /// Node endpoint URL
     node_url: String,
     /// HTTP Client
     client: reqwest::Client,
     _phantom: PhantomData<(Message, SendResponse)>,
+}
+
+// Manual Clone impl so we don't propagate Clone bounds onto the phantom type params.
+// reqwest::Client is backed by an Arc'd connection pool and is cheap to clone.
+impl<M, S> Clone for Client<M, S> {
+    fn clone(&self) -> Self {
+        Self {
+            node_url: self.node_url.clone(),
+            client: self.client.clone(),
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<M, S> Default for Client<M, S> {
@@ -180,6 +192,25 @@ where
             .next()
             .ok_or(Error::AddressError("No message found", address))?;
         Ok(vec![msg.try_into()?])
+    }
+
+    /// Issues all fetches concurrently using cloned reqwest clients.
+    /// `reqwest::Client` is backed by a connection pool and cheap to clone.
+    async fn recv_messages_batch(
+        &mut self,
+        addresses: Vec<Address>,
+    ) -> Vec<(Address, Result<Self::Msg>)> {
+        use futures::future::join_all;
+
+        let futures = addresses.into_iter().map(|address| {
+            let mut client = self.clone();
+            async move {
+                let result = client.recv_message(address).await;
+                (address, result)
+            }
+        });
+
+        join_all(futures).await
     }
 
     async fn latest_timestamp(&self) -> Result<u128> {

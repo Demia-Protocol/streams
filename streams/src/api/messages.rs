@@ -134,7 +134,6 @@ struct MessagesState<'a, T> {
     ids_stack: Vec<(Topic, Identifier, usize)>,
     msg_queue: HashMap<MsgId, VecDeque<(MsgId, TransportMessage)>>,
     stage: VecDeque<(MsgId, TransportMessage)>,
-    successful_round: bool,
     cache: HashMap<MsgId, Message>,
 }
 
@@ -150,7 +149,6 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             ids_stack,
             msg_queue: Default::default(),
             stage: Default::default(),
-            successful_round: Default::default(),
             cache,
             filter,
         }
@@ -244,38 +242,44 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
     where
         T: for<'b> Transport<'b, Msg = TransportMessage>,
     {
-        let (topic, publisher, cursor) = match self.ids_stack.pop() {
-            Some(id_cursor) => id_cursor,
-            None => {
-                self.reset_stack();
-                self.ids_stack.pop()?
+        if self.ids_stack.is_empty() {
+            self.reset_stack();
+            if self.ids_stack.is_empty() {
+                return None;
             }
-        };
+        }
 
         let base_address = self.user.stream_address()?.base();
-        let rel_address = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
-        let address = Address::new(base_address, rel_address);
 
-        match self.user.transport_mut().recv_message(address).await {
-            Ok(msg) => {
+        // Drain the entire stack and compute all addresses to fetch in this round.
+        let addresses: Vec<Address> = self
+            .ids_stack
+            .drain(..)
+            .map(|(topic, publisher, cursor)| {
+                let rel = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
+                Address::new(base_address, rel)
+            })
+            .collect();
+
+        // Concurrent batch fetch — each transport decides how to parallelise this.
+        let results = self.user.transport_mut().recv_messages_batch(addresses).await;
+
+        let mut any_found = false;
+        for (address, result) in results {
+            if let Ok(msg) = result {
                 self.stage.push_back((address.relative(), msg));
-                self.successful_round = true;
-                Some(())
+                any_found = true;
             }
-            Err(_) => {
-                if self.ids_stack.is_empty() && !self.successful_round {
-                    // Officially end of stream
-                    None
-                } else {
-                    // At least one id is producing existing links. continue...
-                    Some(())
-                }
-            }
+        }
+
+        if any_found {
+            Some(())
+        } else {
+            None
         }
     }
 
     fn reset_stack(&mut self) {
-        self.successful_round = false;
         let filter = self.filter;
         self.ids_stack = self
             .user
@@ -297,7 +301,6 @@ impl<'a, T: Send> From<&'a mut User<T>> for MessagesState<'a, T> {
             ids_stack: Vec::new(),
             msg_queue: HashMap::new(),
             stage: VecDeque::new(),
-            successful_round: false,
             cache: HashMap::new(),
             filter: None,
         }
