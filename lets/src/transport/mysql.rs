@@ -277,6 +277,65 @@ where
         Ok(vec![msg.into()])
     }
 
+    /// Issues a single `SELECT ... WHERE msg_id IN (...)` query for all addresses,
+    /// then maps results back per-address. Falls back to sequential on query failure.
+    async fn recv_messages_batch(
+        &mut self,
+        addresses: Vec<Address>,
+    ) -> Vec<(Address, Result<Self::Msg>)>
+    where
+        StreamsMessage: 'async_trait,
+    {
+        use std::collections::HashMap;
+
+        if addresses.is_empty() {
+            return Vec::new();
+        }
+
+        let app_id_bytes = addresses[0].base().as_bytes().to_vec();
+        let placeholders: String = addresses.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+        let query_string = format!(
+            "SELECT * FROM sql_messages WHERE msg_id IN ({}) AND app_id = ?",
+            placeholders
+        );
+
+        let mut query = sqlx::query_as::<sqlx::mysql::MySql, SqlMessage>(&query_string);
+        for addr in &addresses {
+            query = query.bind(addr.relative().as_bytes().to_vec());
+        }
+
+        let rows = match query
+            .bind(app_id_bytes)
+            .fetch_all(&self.0)
+            .await
+            .map_err(|e| Error::MySqlClient("fetching batch messages", e))
+        {
+            Ok(rows) => rows,
+            Err(_) => {
+                let mut results = Vec::with_capacity(addresses.len());
+                for address in addresses {
+                    results.push((address, self.recv_message(address).await));
+                }
+                return results;
+            }
+        };
+
+        let mut msg_map: HashMap<Vec<u8>, SqlMessage> =
+            rows.into_iter().map(|m| (m.msg_id.clone(), m)).collect();
+
+        addresses
+            .into_iter()
+            .map(|address| {
+                let key = address.relative().as_bytes().to_vec();
+                let result = match msg_map.remove(&key) {
+                    Some(sql_msg) => self.verify_sql_msg(&sql_msg).map(|_| sql_msg.into()),
+                    None => Err(Error::AddressError("No message found", address)),
+                };
+                (address, result)
+            })
+            .collect()
+    }
+
     async fn latest_timestamp(&self) -> Result<u128> {
         let start = std::time::SystemTime::now();
         Ok(start

@@ -134,6 +134,27 @@ where
         .await?;
         Ok(msgs)
     }
+
+    async fn recv_messages_batch(
+        &mut self,
+        addresses: Vec<Address>,
+    ) -> Vec<(Address, Result<Self::Msg>)> {
+        let mut results = Vec::with_capacity(addresses.len());
+        for address in addresses {
+            results.push((address, self.recv_message(address).await));
+        }
+        results
+    }
+
+    async fn latest_timestamp(&self) -> Result<u128> {
+        Ok(alloc::boxed::Box::pin(self.client().get_info())
+            .await
+            .map_err(|e| Error::IotaClient("fetching node info", e))?
+            .nodeinfo
+            .status
+            .latest_milestone_timestamp as u128
+            * 1000)
+    }
 }
 
 impl TryFrom<IotaMessage> for TransportMessage {

@@ -105,6 +105,25 @@ where
             .ok_or(Error::AddressError("No message found", address))
     }
 
+    /// Acquires the read lock once and resolves all addresses in a single pass,
+    /// avoiding repeated lock acquisitions from sequential `recv_message` calls.
+    async fn recv_messages_batch(
+        &mut self,
+        addresses: Vec<Address>,
+    ) -> Vec<(Address, Result<Self::Msg>)> {
+        let bucket = self.bucket.read();
+        addresses
+            .into_iter()
+            .map(|address| {
+                let result = bucket
+                    .get(&address)
+                    .and_then(|v| v.last().cloned())
+                    .ok_or_else(|| Error::AddressError("No message found", address));
+                (address, result)
+            })
+            .collect()
+    }
+
     async fn latest_timestamp(&self) -> Result<u128> {
         let start = std::time::SystemTime::now();
         Ok(start

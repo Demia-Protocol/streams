@@ -59,6 +59,18 @@ pub trait Transport<'a> {
         }
     }
 
+    /// Receive multiple messages by address, potentially concurrently.
+    ///
+    /// Returns a vec of `(Address, Result<Msg>)` covering every input address,
+    /// with an `Err` entry for any address where no message was found.
+    /// Implementations should issue fetches concurrently where the transport allows it.
+    async fn recv_messages_batch(
+        &mut self,
+        addresses: Vec<Address>,
+    ) -> Vec<(Address, Result<Self::Msg>)>
+    where
+        'a: 'async_trait;
+
     async fn latest_timestamp(&self) -> Result<u128>;
 }
 
