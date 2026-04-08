@@ -135,6 +135,9 @@ where
         self.state
             .cursor_store
             .set_latest_link(topic, address.relative());
+        self.state
+            .cursor_store
+            .set_latest_link(prev_topic, address.relative());
         Ok(SendResponse::new(address, send_response))
     }
 }
