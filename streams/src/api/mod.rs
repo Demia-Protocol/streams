@@ -10,6 +10,8 @@ pub mod message;
 pub mod message_builder;
 /// Message Retrieval
 pub mod messages;
+/// State reset helpers
+pub(crate) mod reset;
 /// Message Retrieval Filter Selector
 pub(crate) mod selector;
 /// Message Wrapper for Sent Messages
