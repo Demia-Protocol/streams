@@ -53,7 +53,7 @@ serde = {version = "1", default-features = false, optional = true}
 serde_json = {version = "1", default-features = false, optional = true}
 
 [dev-dependencies]
-dotenv = {version = "0.15.0", default-features = false}
+dotenvy = {version = "0.15.7", default-features = false}
 hex = {version = "0.4.3", default-features = false}
 tokio = {version = "1.15", default-features = false}
 
