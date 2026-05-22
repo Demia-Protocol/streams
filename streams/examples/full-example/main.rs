@@ -222,7 +222,7 @@ fn new_seed() -> String {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load or .env file, log message if we failed
-    if dotenv::dotenv().is_err() {
+    if dotenvy::dotenv().is_err() {
         println!(".env file not found; copy and rename example.env to \".env\"");
     };
 
