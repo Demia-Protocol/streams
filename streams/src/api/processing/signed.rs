@@ -171,15 +171,6 @@ where
             .ok_or(Error::NoCursor(topic.clone()))?
             .clone();
 
-        // From the point of view of cursor tracking, the message exists, regardless of the validity or
-        // accessibility to its content. Therefore we must update the cursor of the publisher before
-        // handling the message
-        self.state.cursor_store.insert_cursor(
-            &topic,
-            permission.clone(),
-            preparsed.header().sequence(),
-        );
-
         // Check pre for time-related permissions
         let (changed, permission) = self
             .check_and_update_permission(
@@ -206,9 +197,20 @@ where
                 // Spongos must be copied because wrapping mutates it
                 spongos
             } else {
+                // Do NOT advance the cursor here: an orphan is retryable (its
+                // predecessor may simply not be processed yet), and advancing
+                // would skip this message forever on the next probe pass
                 return Ok(Message::orphan(address, pk, sig, preparsed));
             }
         };
+
+        // The message is processable, track the publisher cursor before unwrapping
+        // so invalid content still advances the chain
+        self.state.cursor_store.insert_cursor(
+            &topic,
+            permission.clone(),
+            preparsed.header().sequence(),
+        );
         let signed_packet = signed_packet::Unwrap::new(&mut linked_msg_spongos, #[cfg(feature = "did")]  cache);
         let (message, spongos) = preparsed
             .unwrap(signed_packet)

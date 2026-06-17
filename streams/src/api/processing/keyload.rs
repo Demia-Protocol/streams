@@ -278,12 +278,17 @@ where
         }
         // From the point of view of cursor tracking, the message exists, regardless of the validity or
         // accessibility to its content. Therefore we must update the cursor of the publisher before
-        // handling the message
-        self.state.cursor_store.insert_cursor(
-            &topic,
-            Permissioned::Admin(publisher),
-            preparsed.header().sequence(),
-        );
+        // handling the message. Never rewind: an old keyload re-handled out of order
+        // must not drag the publisher cursor backwards and trigger re-fetch loops
+        let sequence = preparsed.header().sequence();
+        let prior = self.state.cursor_store.get_cursor(&topic, &publisher).unwrap_or(0);
+        if sequence >= prior {
+            self.state.cursor_store.insert_cursor(
+                &topic,
+                Permissioned::Admin(publisher),
+                sequence,
+            );
+        }
 
         // Unwrap message
         // Ok to unwrap since an author identifier is set at the same time as the stream address

@@ -135,6 +135,9 @@ struct MessagesState<'a, T> {
     msg_queue: HashMap<MsgId, VecDeque<(MsgId, TransportMessage)>>,
     stage: VecDeque<(MsgId, TransportMessage)>,
     cache: HashMap<MsgId, Message>,
+    // Addresses that orphaned this session, skipped by the prober so an
+    // unresolvable orphan can't make the iterator spin forever
+    orphaned: hashbrown::HashSet<MsgId>,
 }
 
 impl<'a, T: Send + Sync> MessagesState<'a, T> {
@@ -151,6 +154,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
             stage: Default::default(),
             cache,
             filter,
+            orphaned: Default::default(),
         }
     }
 
@@ -191,6 +195,7 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
                         // is already present in the state, but we don't want to couple this iterator to
                         // a memory-intensive storage. Instead, we take the optimistic approach and store
                         // the msg for later if the handling has failed.
+                        self.orphaned.insert(relative_address);
                         self.msg_queue
                             .entry(linked_msg_address)
                             .or_default()
@@ -199,6 +204,10 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
                         continue;
                     }
                     Some(message) => {
+                        // A successfully handled message is no longer an orphan; drop any stale
+                        // entry so the set only holds currently-pending orphans, not every id
+                        // that ever transiently orphaned over the stream's lifetime.
+                        self.orphaned.remove(&message.address().relative());
                         // Check if message has descendants pending to process and stage them for processing
                         if let Some(msgs) = self.msg_queue.remove(&message.address().relative()) {
                             self.stage.extend(msgs);
@@ -231,7 +240,11 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
 
         match self.user.handle_message(address, binary_msg).await {
             Ok(message) => {
-                self.cache.insert(relative_address, message.clone());
+                // Orphans must not be cached: once their predecessor is processed and
+                // they get re-staged, they need a real re-handle, not the cached orphan
+                if !message.is_orphan() {
+                    self.cache.insert(relative_address, message.clone());
+                }
                 Some(message)
             }
             Err(_) => None,
@@ -252,12 +265,18 @@ impl<'a, T: Send + Sync> MessagesState<'a, T> {
         let base_address = self.user.stream_address()?.base();
 
         // Drain the entire stack and compute all addresses to fetch in this round.
+        // Addresses that already orphaned this session are skipped, they are
+        // retried on the next session once their predecessor is available
+        let orphaned = &self.orphaned;
         let addresses: Vec<Address> = self
             .ids_stack
             .drain(..)
-            .map(|(topic, publisher, cursor)| {
+            .filter_map(|(topic, publisher, cursor)| {
                 let rel = MsgId::gen(base_address, &publisher, &topic, cursor + 1);
-                Address::new(base_address, rel)
+                if orphaned.contains(&rel) {
+                    return None;
+                }
+                Some(Address::new(base_address, rel))
             })
             .collect();
 
@@ -303,6 +322,7 @@ impl<'a, T: Send> From<&'a mut User<T>> for MessagesState<'a, T> {
             stage: VecDeque::new(),
             cache: HashMap::new(),
             filter: None,
+            orphaned: Default::default(),
         }
     }
 }
