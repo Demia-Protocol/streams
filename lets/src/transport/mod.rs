@@ -77,6 +77,9 @@ pub trait Transport<'a> {
 /// Localised mapping for tests and simulations
 #[cfg(feature = "bucket")]
 pub mod bucket;
+/// Split read/outbox client backing the queue-based network send pipeline
+#[cfg(feature = "bucket")]
+pub mod queue;
 /// `sqlx` based mysql client
 #[cfg(feature = "mysql-client")]
 pub mod mysql;
