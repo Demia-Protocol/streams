@@ -75,10 +75,21 @@ impl Clone for DIDUrlInfo {
     }
 }
 
+/// The tag (hex-encoded alias id) of a `did:demia` string — the segment after the last `:`.
+///
+/// A DID's identity is its alias, not the exact string form it is presented in. The legacy short
+/// form `did:demia:<tag>` and the scoped long form `did:demia:<country>:<network>:<tag>` share the
+/// same tag and therefore denote the same subject. Keying equality/ordering/hashing on the tag (plus
+/// the method fragments, which are stable across promotion) lets a promoted long-form identity match
+/// the short-form entry baked into existing keyloads, so no keyload re-issue is needed.
+fn did_tag(did: &str) -> &str {
+    did.rsplit(':').next().unwrap_or(did)
+}
+
 impl core::hash::Hash for DIDUrlInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.did.hash(state);
-        self.client_url.hash(state);
+        // NB: keep in lockstep with `PartialEq`/`Ord` below — same fields, same order.
+        did_tag(&self.did).hash(state);
         self.exchange_fragment.hash(state);
         self.signing_fragment.hash(state);
     }
@@ -86,8 +97,10 @@ impl core::hash::Hash for DIDUrlInfo {
 
 impl PartialEq for DIDUrlInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.did == other.did
-            //&& self.client_url == other.client_url
+        // Compare by alias tag (short/long forms are the same subject), not the full DID string.
+        // `client_url` is deliberately excluded: an identity is the same regardless of which node
+        // endpoint resolves it.
+        did_tag(&self.did) == did_tag(&other.did)
             && self.exchange_fragment == other.exchange_fragment
             && self.signing_fragment == other.signing_fragment
     }
@@ -103,7 +116,11 @@ impl PartialOrd for DIDUrlInfo {
 
 impl Ord for DIDUrlInfo {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.did.cmp(&other.did)
+        // Consistent with `PartialEq`: order by (tag, exchange_fragment, signing_fragment).
+        did_tag(&self.did)
+            .cmp(did_tag(&other.did))
+            .then_with(|| self.exchange_fragment.cmp(&other.exchange_fragment))
+            .then_with(|| self.signing_fragment.cmp(&other.signing_fragment))
     }
 }
 
@@ -321,5 +338,54 @@ where
                 )
             })?;
         Ok(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use identity_demia::demia::DemiaDID;
+
+    const TAG: &str = "0x8036235b6b5939435a45d68bcea7890eef399209a669c8c263fac7f5089b2ec6";
+
+    fn info(did: &str, client_url: &str) -> DIDUrlInfo {
+        DIDUrlInfo::new(
+            DemiaDID::parse(did).unwrap(),
+            client_url.to_string(),
+            "streams_ke_keys".to_string(),
+            "streams_sig_keys".to_string(),
+        )
+    }
+
+    #[test]
+    fn short_and_long_forms_with_same_tag_are_equal() {
+        let short = info(&format!("did:demia:{TAG}"), "http://node-a:14265");
+        // Different scope AND different node endpoint — still the same subject/identity.
+        let long = info(&format!("did:demia:usa:dmia:{TAG}"), "http://node-b:14265");
+
+        assert_eq!(short, long, "short and long forms of the same tag must be equal");
+        assert_eq!(short.cmp(&long), Ordering::Equal, "Ord must agree with Eq");
+
+        // Hash must agree with Eq (equal values hash equally), so they collapse in a HashSet.
+        let mut set = std::collections::HashSet::new();
+        set.insert(short);
+        assert!(!set.insert(long), "long form must dedupe against the short form in a HashSet");
+    }
+
+    #[test]
+    fn different_tag_is_not_equal() {
+        let a = info(&format!("did:demia:{TAG}"), "http://node:14265");
+        let other_tag = "0x71b709dff439f1ac9dd2b9c2e28db0807156b378e13bfa3605ce665aa0d0fdca";
+        let b = info(&format!("did:demia:{other_tag}"), "http://node:14265");
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn different_fragments_are_not_equal() {
+        let a = info(&format!("did:demia:{TAG}"), "http://node:14265");
+        let mut b = a.clone();
+        *b.signing_fragment_mut() = "other_sig".to_string();
+        assert_ne!(a, b, "fragments are part of identity");
+        assert_ne!(a.cmp(&b), Ordering::Equal);
     }
 }

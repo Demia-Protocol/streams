@@ -446,12 +446,17 @@ where
                 match sender {
                     IdentityKind::DID(ref mut sender_info) => {
                         let receiver_method = get_exchange_method(url_info, cache).await?;
-                        let sender_method =
-                            get_exchange_method(sender_info.info().url_info(), cache).await?;
 
-                        //  The location of sender's xkeys in stronghold
-                        let sender_location =
-                            Location::generic(STREAMS_VAULT, sender_method.id().to_string());
+                        // The sender's xkeys live at the normalised short method-URL vault location
+                        // `did:demia:<tag>#<exchange>` (legacy form; see `lets::id::identity`) — matches
+                        // existing key storage and is unchanged by a promotion short->long.
+                        let sender_record = {
+                            let url_info = sender_info.info().url_info();
+                            let did_str = url_info.did();
+                            let tag = did_str.rsplit(':').next().unwrap_or(did_str);
+                            format!("did:demia:{}#{}", tag, url_info.exchange_fragment())
+                        };
+                        let sender_location = Location::generic(STREAMS_VAULT, sender_record.as_bytes());
                         // Get public key for encryption
                         let xkey = iota_sdk::crypto::keys::x25519::PublicKey::try_from_slice(
                             &receiver_method.data().try_decode().map_err(|e| {
