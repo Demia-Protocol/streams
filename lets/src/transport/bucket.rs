@@ -81,11 +81,12 @@ where
     where
         Self::Msg: 'async_trait,
     {
-        self.bucket
-            .write()
-            .entry(addr)
-            .or_default()
-            .push(msg.clone());
+        if !self.bucket.read().contains_key(&addr) {
+            let mut bucket = self.bucket.write();
+            if !bucket.contains_key(&addr) {
+                bucket.entry(addr).or_default().push(msg.clone());
+            }
+        }
         Ok(msg)
     }
 

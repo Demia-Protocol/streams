@@ -9,6 +9,7 @@ use spongos::{ddml::commands::unwrap, PRP};
 // Local
 use crate::{
     error::Result,
+    id::{Ed25519Pub, Ed25519Sig},
     message::{content::ContentUnwrap, hdf::HDF, preparsed::PreparsedMessage},
 };
 
@@ -59,6 +60,18 @@ impl TransportMessage {
     /// Returns a reference to the signature of the message
     pub fn sig(&self) -> &Vec<u8> {
         &self.sig
+    }
+
+    pub fn public_key(&self) -> Option<Ed25519Pub> {
+        <[u8; 32]>::try_from(self.pk.as_slice())
+            .ok()
+            .and_then(|bytes| Ed25519Pub::try_from_bytes(bytes).ok())
+    }
+
+    pub fn signature(&self) -> Option<Ed25519Sig> {
+        <[u8; 64]>::try_from(self.sig.as_slice())
+            .ok()
+            .map(Ed25519Sig::from_bytes)
     }
 
     /// Consumes the [`TransportMessage`], returning the body of the message
