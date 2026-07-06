@@ -77,11 +77,9 @@ impl Clone for DIDUrlInfo {
 
 /// The tag (hex-encoded alias id) of a `did:demia` string — the segment after the last `:`.
 ///
-/// A DID's identity is its alias, not the exact string form it is presented in. The legacy short
-/// form `did:demia:<tag>` and the scoped long form `did:demia:<country>:<network>:<tag>` share the
-/// same tag and therefore denote the same subject. Keying equality/ordering/hashing on the tag (plus
-/// the method fragments, which are stable across promotion) lets a promoted long-form identity match
-/// the short-form entry baked into existing keyloads, so no keyload re-issue is needed.
+/// A DID's identity is its alias. The legacy short form and scoped long form DID's share the same
+/// tag and therefore denote the same subject. Keying equality/ordering/hashing on the tag enables
+/// parity between the two forms without issuing new keyloads.
 fn did_tag(did: &str) -> &str {
     did.rsplit(':').next().unwrap_or(did)
 }
@@ -97,9 +95,7 @@ impl core::hash::Hash for DIDUrlInfo {
 
 impl PartialEq for DIDUrlInfo {
     fn eq(&self, other: &Self) -> bool {
-        // Compare by alias tag (short/long forms are the same subject), not the full DID string.
-        // `client_url` is deliberately excluded: an identity is the same regardless of which node
-        // endpoint resolves it.
+        // Compare by alias tag 
         did_tag(&self.did) == did_tag(&other.did)
             && self.exchange_fragment == other.exchange_fragment
             && self.signing_fragment == other.signing_fragment

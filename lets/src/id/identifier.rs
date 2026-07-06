@@ -447,9 +447,8 @@ where
                     IdentityKind::DID(ref mut sender_info) => {
                         let receiver_method = get_exchange_method(url_info, cache).await?;
 
-                        // The sender's xkeys live at the normalised short method-URL vault location
-                        // `did:demia:<tag>#<exchange>` (legacy form; see `lets::id::identity`) — matches
-                        // existing key storage and is unchanged by a promotion short->long.
+                        // The sender's xkeys live at the normalized short method-URL vault location
+                        // `did:demia:<tag>#<exchange>`
                         let sender_record = {
                             let url_info = sender_info.info().url_info();
                             let did_str = url_info.did();

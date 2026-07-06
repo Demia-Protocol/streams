@@ -182,10 +182,8 @@ impl IdentityKind {
                     SpongosError::Context("fetching stronghold adaptor", e.to_string())
                 })?;
 
-                // Parse for validation, but key the vault location on the NORMALISED SHORT method-URL
-                // `did:demia:<tag>#<fragment>` (drop country/network). This is where legacy identities
-                // already stored the key, so no re-vault; and it is stable across a promotion
-                // short->long since the scope segment is excluded.
+                // Parse for validation, but key the vault location on the NORMALIZED method-URL
+                // `did:demia:<tag>#<fragment>`
                 let did = DemiaDID::parse(did_url).map_err(|e| {
                     SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
                 })?;
@@ -328,9 +326,7 @@ where
                             .commit()?
                             .squeeze(External::new(&mut NBytes::new(&mut hash)))?;
 
-                        // Key the vault location on the normalised short method-URL
-                        // `did:demia:<tag>#<fragment>` (legacy form) — matches existing key storage
-                        // and is unchanged by a promotion short->long.
+                        // Key the vault location on the normalized method-URL `did:demia:<tag>#<fragment>`
                         let did = DemiaDID::parse(did_url).map_err(|e| {
                             SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
                         })?;
@@ -406,10 +402,7 @@ where
 
                 let data = EncryptedData::new(pk, nonce, tag, ciphertext);
 
-                // Key the vault location on the normalised short method-URL `did:demia:<tag>#<exchange>`
-                // (legacy form). This matches existing key storage and is form-independent, so a
-                // promoted long identity decrypts a slot written for its short form (and vice versa)
-                // without re-vaulting, and without resolving the DID document during decryption.
+                // Key the vault location on the normalized method-URL `did:demia:<tag>#<exchange>`
                 let record = {
                     let url_info = did.info().url_info();
                     let did_str = url_info.did();
