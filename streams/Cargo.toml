@@ -58,7 +58,7 @@ hex = {version = "0.4.3", default-features = false}
 tokio = {version = "1.15", default-features = false}
 
 isocountry = { version = "0.3" }
-identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch="develop-demia", features = ["iota-client"]}
+identity_demia = { git = "https://github.com/demia-protocol/identity.rs", branch="fix/identity-country-network-in-doc", features = ["iota-client"]}
 iota_stronghold = { git = "https://github.com/demia-protocol/stronghold.rs", branch="develop-demia"}
 iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch="develop-demia", features = ["tls", "stronghold"] }
 
