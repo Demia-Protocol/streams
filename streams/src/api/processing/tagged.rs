@@ -8,7 +8,7 @@
 use lets::{
     address::{Address, MsgId},
     message::{Message as LetsMessage, PreparsedMessage, Topic, TransportMessage, HDF, PCF},
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 
 // Local
@@ -35,6 +35,30 @@ where
         public_payload: P,
         masked_payload: M,
     ) -> Result<SendResponse<TSR>>
+    where
+        M: AsRef<[u8]>,
+        P: AsRef<[u8]>,
+        Top: Into<Topic>,
+    {
+        let prepared = self
+            .prepare_tagged_packet(topic, public_payload, masked_payload)
+            .await?;
+        let address = prepared.address();
+        let send_response = self.send_prepared_message(prepared.into_response()).await?;
+        Ok(SendResponse::new(address, send_response))
+    }
+}
+
+impl<T> User<T>
+where
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+{
+    pub async fn prepare_tagged_packet<P, M, Top>(
+        &mut self,
+        topic: Top,
+        public_payload: P,
+        masked_payload: M,
+    ) -> Result<SendResponse<PreparedMessage>>
     where
         M: AsRef<[u8]>,
         P: AsRef<[u8]>,
@@ -117,9 +141,9 @@ where
         if self.transport.recv_message(message_address).await.is_ok() {
             return Err(Error::AddressUsed("tagged packet", message_address));
         }
-        let send_response = self.send_message(message_address, transport_msg).await?;
+        let prepared = self.prepare_message(message_address, transport_msg).await?;
 
-        // If message has been sent successfully, commit message to stores
+        // Preparing mutates the stream state. The caller must persist/publish the prepared message.
         self.state
             .cursor_store
             .insert_cursor(&topic, permission.clone(), new_cursor);
@@ -135,7 +159,7 @@ where
         // Update Branch Links
         self.set_latest_link(topic, rel_address);
 
-        Ok(SendResponse::new(message_address, send_response))
+        Ok(SendResponse::new(message_address, prepared))
     }
 }
 

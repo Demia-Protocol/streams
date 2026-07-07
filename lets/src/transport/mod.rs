@@ -14,7 +14,22 @@ use crate::id::{Ed25519Pub, Ed25519Sig};
 use crate::{
     address::Address,
     error::{Error, Result},
+    message::TransportMessage,
 };
+
+/// A sealed streams message that can be sent without reconstructing the originating user.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct PreparedMessage<Msg = TransportMessage> {
+    pub address: Address,
+    pub msg: Msg,
+}
+
+impl<Msg> PreparedMessage<Msg> {
+    pub fn new(address: Address, msg: Msg) -> Self {
+        Self { address, msg }
+    }
+}
 
 /// Network transport abstraction.
 /// Parametrized by the type of message addresss.
@@ -77,9 +92,6 @@ pub trait Transport<'a> {
 /// Localised mapping for tests and simulations
 #[cfg(feature = "bucket")]
 pub mod bucket;
-/// Split read/outbox client backing the queue-based network send pipeline
-#[cfg(feature = "bucket")]
-pub mod queue;
 /// `sqlx` based mysql client
 #[cfg(feature = "mysql-client")]
 pub mod mysql;

@@ -24,7 +24,7 @@ use lets::{
         ContentSizeof, ContentUnwrap, ContentWrap, Message as LetsMessage, Topic, TopicHash,
         TransportMessage, HDF, PCF,
     },
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 use spongos::{
     ddml::{
@@ -823,6 +823,37 @@ where
         address: Address,
         msg: TransportMessage,
     ) -> Result<TSR> {
+        let prepared = self.prepare_message(address, msg).await?;
+        self.send_prepared_message(prepared).await
+    }
+
+    pub(crate) async fn send_prepared_message(&mut self, prepared: PreparedMessage) -> Result<TSR> {
+        let address = prepared.address;
+        let public_key = prepared
+            .msg
+            .public_key()
+            .ok_or(Error::Setup("prepared message public key is missing"))?;
+        let signature = prepared
+            .msg
+            .signature()
+            .ok_or(Error::Setup("prepared message signature is missing"))?;
+
+        self.transport
+            .send_message(address, prepared.msg, public_key, signature)
+            .await
+            .map_err(|e| Error::Transport(address, "send prepared message", e))
+    }
+}
+
+impl<T> User<T>
+where
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+{
+    pub(crate) async fn prepare_message(
+        &mut self,
+        address: Address,
+        msg: TransportMessage,
+    ) -> Result<PreparedMessage> {
         let identity = self
             .identity_mut()
             .ok_or(Error::NoIdentity("send messages"))?;
@@ -836,11 +867,12 @@ where
             .sig_pk()
             .await
             .map_err(|e| Error::Transport(address, "send message", e))?;
-        self.transport
-            .send_message(address, msg, pub_key, sig)
-            .await
-            .map_err(|e| Error::Transport(address, "send announce message", e))
-        // }
+
+        Ok(PreparedMessage::new(
+            address,
+            msg.with_pk(pub_key.to_bytes().to_vec())
+                .with_sig(sig.to_bytes().to_vec()),
+        ))
     }
 }
 
@@ -1097,7 +1129,7 @@ impl<T: serde::Serialize> serde::Serialize for User<T> {
 
 #[cfg(test)]
 mod tests {
-    use lets::transport::{bucket, queue};
+    use lets::transport::bucket;
 
     use crate::{api::user::User, Result};
 
@@ -1106,37 +1138,6 @@ mod tests {
     const BASE_BRANCH: &str = "BASE_BRANCH";
     const PUBLIC_PAYLOAD: &[u8] = b"PUBLICPAYLOAD";
     const MASKED_PAYLOAD: &[u8] = b"MASKEDPAYLOAD";
-
-    #[tokio::test]
-    async fn queue_transport_prepares_messages_until_confirmed() -> Result<()> {
-        let transport = queue::Client::new();
-        let mut author = User::builder()
-            .with_identity(lets::id::Ed25519::from_seed("QUEUE_AUTHOR_SEED"))
-            .with_transport(transport.clone())
-            .build();
-
-        let announcement = author.create_stream(BASE_BRANCH).await?;
-        let announce_addr = announcement.address();
-        author
-            .send_signed_packet(BASE_BRANCH, PUBLIC_PAYLOAD, MASKED_PAYLOAD)
-            .await?;
-
-        let mut reader = User::builder().with_transport(transport.clone()).build();
-        assert!(reader.receive_message(announce_addr).await.is_err());
-
-        let mut transport_mut = transport.clone();
-        while let Some(prepared) = transport.pop_prepared() {
-            assert!(
-                transport_mut
-                    .insert_message(prepared.address, prepared.msg)
-                    .await
-                    .is_ok()
-            );
-        }
-
-        reader.receive_message(announce_addr).await?;
-        Ok(())
-    }
 
     #[tokio::test]
     async fn serialize() -> Result<()> {

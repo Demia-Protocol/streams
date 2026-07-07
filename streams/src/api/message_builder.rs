@@ -1,7 +1,7 @@
 use crate::{Error, Result, SendResponse, User};
 use lets::{
     message::{Topic, TransportMessage},
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 
 /// A simple builder used by a [`User`] for creating messages for transport.
@@ -155,6 +155,38 @@ impl<'a, P, Trans> MessageBuilder<'a, P, Trans> {
         } else {
             self.user
                 .send_tagged_packet(self.topic, public, private)
+                .await
+        }
+    }
+
+    /// Prepares the message and mutates the local Streams state without publishing to transport.
+    ///
+    /// The returned prepared message must be persisted or published by the caller.
+    pub async fn prepare(self) -> Result<SendResponse<PreparedMessage>>
+    where
+        P: AsRef<[u8]>,
+        Trans: for<'b> Transport<'b, Msg = TransportMessage> + Send,
+    {
+        if self.payload.as_ref().is_empty() {
+            return Err(Error::PayloadEmpty);
+        }
+
+        let mut public: &[u8] = &[];
+        let mut private: &[u8] = &[];
+
+        if self.private {
+            private = self.payload.as_ref()
+        } else {
+            public = self.payload.as_ref()
+        }
+
+        if self.signed {
+            self.user
+                .prepare_signed_packet(self.topic, public, private)
+                .await
+        } else {
+            self.user
+                .prepare_tagged_packet(self.topic, public, private)
                 .await
         }
     }
