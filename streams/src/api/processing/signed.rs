@@ -44,9 +44,7 @@ where
         let prepared = self
             .prepare_signed_packet(topic, public_payload, masked_payload)
             .await?;
-        let address = prepared.address();
-        let send_response = self.send_prepared_message(prepared.into_response()).await?;
-        Ok(SendResponse::new(address, send_response))
+        self.send_prepared_response(prepared).await
     }
 }
 

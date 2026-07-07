@@ -129,9 +129,7 @@ where
         Psks: IntoIterator<Item = PskId>,
     {
         let prepared = self.prepare_keyload(topic, subscribers, psk_ids).await?;
-        let address = prepared.address();
-        let send_response = self.send_prepared_message(prepared.into_response()).await?;
-        Ok(SendResponse::new(address, send_response))
+        self.send_prepared_response(prepared).await
     }
 }
 

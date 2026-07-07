@@ -843,6 +843,15 @@ where
             .await
             .map_err(|e| Error::Transport(address, "send prepared message", e))
     }
+
+    pub(crate) async fn send_prepared_response(
+        &mut self,
+        prepared: SendResponse<PreparedMessage>,
+    ) -> Result<SendResponse<TSR>> {
+        let address = prepared.address();
+        let send_response = self.send_prepared_message(prepared.into_response()).await?;
+        Ok(SendResponse::new(address, send_response))
+    }
 }
 
 impl<T> User<T>
