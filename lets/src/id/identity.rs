@@ -40,7 +40,7 @@ use crate::id::{ed25519::Ed25519, Ed25519Sig};
 use crate::{
     alloc::string::ToString,
     error::Error,
-    id::{cache::IdentityCache, did::{get_exchange_method, DID, STREAMS_VAULT}},
+    id::{cache::IdentityCache, did::{DID, STREAMS_VAULT}},
 };
 
 use crate::{
@@ -182,28 +182,18 @@ impl IdentityKind {
                     SpongosError::Context("fetching stronghold adaptor", e.to_string())
                 })?;
 
-                // Join the DID identifier with the key fragment of the verification method
-                let fragment = if !fragment.starts_with('#') {
-                    format!("#{fragment}")
-                } else {
-                    fragment
-                };
-                let method = DemiaDID::parse(did_url)
-                    .map_err(|e| {
-                        SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
-                    })?
-                    .join(&fragment)
-                    .map_err(|e| {
-                        SpongosError::Context(
-                            "ContentSign",
-                            Error::did("join did fragments", e).to_string(),
-                        )
-                    })?;
+                // Parse for validation, but key the vault location on the NORMALIZED method-URL
+                // `did:demia:<tag>#<fragment>`
+                let did = DemiaDID::parse(did_url).map_err(|e| {
+                    SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
+                })?;
+                let fragment = fragment.trim_start_matches('#');
 
                 let lock = stronghold.read().await;
                 // update stronghold snapshot
 
-                let location = Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
+                let record = format!("did:demia:{}#{}", did.tag(), fragment);
+                let location = Location::generic(STREAMS_VAULT, record.as_bytes());
                 let sig = lock
                     .ed25519_sign(location, data)
                     .await
@@ -336,32 +326,17 @@ where
                             .commit()?
                             .squeeze(External::new(&mut NBytes::new(&mut hash)))?;
 
-                        // Join the DID identifier with the key fragment of the verification method
-                        let fragment = if !fragment.starts_with('#') {
-                            format!("#{fragment}")
-                        } else {
-                            fragment
-                        };
-                        let method = DemiaDID::parse(did_url)
-                            .map_err(|e| {
-                                SpongosError::Context(
-                                    "ContentSign",
-                                    Error::did("did parse", e).to_string(),
-                                )
-                            })?
-                            .join(&fragment)
-                            .map_err(|e| {
-                                SpongosError::Context(
-                                    "ContentSign",
-                                    Error::did("join did fragments", e).to_string(),
-                                )
-                            })?;
+                        // Key the vault location on the normalized method-URL `did:demia:<tag>#<fragment>`
+                        let did = DemiaDID::parse(did_url).map_err(|e| {
+                            SpongosError::Context("ContentSign", Error::did("did parse", e).to_string())
+                        })?;
+                        let fragment = fragment.trim_start_matches('#');
 
                         let lock = stronghold.read().await;
                         // update stronghold snapshot
 
-                        let location =
-                            Location::generic(STREAMS_VAULT, method.to_string().as_bytes());
+                        let record = format!("did:demia:{}#{}", did.tag(), fragment);
+                        let location = Location::generic(STREAMS_VAULT, record.as_bytes());
                         let sig = lock
                             .ed25519_sign(location, &hash)
                             .await
@@ -406,7 +381,7 @@ where
         &mut self,
         recipient: &mut IdentityKind,
         key: &mut [u8],
-        cache: &mut C,
+        _cache: &mut C,
     ) -> SpongosResult<&mut Self> {
         // TODO: Replace with separate logic for EdPubKey and DID instances (pending Identity xkey
         // introduction)
@@ -426,10 +401,17 @@ where
                     .mask(NBytes::new(&mut ciphertext))?;
 
                 let data = EncryptedData::new(pk, nonce, tag, ciphertext);
-                let method = get_exchange_method(did.info().url_info(), cache).await?;
+
+                // Key the vault location on the normalized method-URL `did:demia:<tag>#<exchange>`
+                let record = {
+                    let url_info = did.info().url_info();
+                    let did_str = url_info.did();
+                    let tag = did_str.rsplit(':').next().unwrap_or(did_str);
+                    format!("did:demia:{}#{}", tag, url_info.exchange_fragment())
+                };
 
                 // Perform stronghold AEAD decryption
-                let location = Location::generic(STREAMS_VAULT, method.id().to_string());
+                let location = Location::generic(STREAMS_VAULT, record.as_bytes());
                 let stronghold = did.info_mut().url_info_mut().stronghold().map_err(|e| {
                     SpongosError::Context("retrieving stronghold adapter", e.to_string())
                 })?;
