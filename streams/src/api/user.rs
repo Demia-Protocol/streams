@@ -24,7 +24,7 @@ use lets::{
         ContentSizeof, ContentUnwrap, ContentWrap, Message as LetsMessage, Topic, TopicHash,
         TransportMessage, HDF, PCF,
     },
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 use spongos::{
     ddml::{
@@ -823,6 +823,46 @@ where
         address: Address,
         msg: TransportMessage,
     ) -> Result<TSR> {
+        let prepared = self.prepare_message(address, msg).await?;
+        self.send_prepared_message(prepared).await
+    }
+
+    pub(crate) async fn send_prepared_message(&mut self, prepared: PreparedMessage) -> Result<TSR> {
+        let address = prepared.address;
+        let public_key = prepared
+            .msg
+            .public_key()
+            .ok_or(Error::Setup("prepared message public key is missing"))?;
+        let signature = prepared
+            .msg
+            .signature()
+            .ok_or(Error::Setup("prepared message signature is missing"))?;
+
+        self.transport
+            .send_message(address, prepared.msg, public_key, signature)
+            .await
+            .map_err(|e| Error::Transport(address, "send prepared message", e))
+    }
+
+    pub(crate) async fn send_prepared_response(
+        &mut self,
+        prepared: SendResponse<PreparedMessage>,
+    ) -> Result<SendResponse<TSR>> {
+        let address = prepared.address();
+        let send_response = self.send_prepared_message(prepared.into_response()).await?;
+        Ok(SendResponse::new(address, send_response))
+    }
+}
+
+impl<T> User<T>
+where
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+{
+    pub(crate) async fn prepare_message(
+        &mut self,
+        address: Address,
+        msg: TransportMessage,
+    ) -> Result<PreparedMessage> {
         let identity = self
             .identity_mut()
             .ok_or(Error::NoIdentity("send messages"))?;
@@ -836,11 +876,12 @@ where
             .sig_pk()
             .await
             .map_err(|e| Error::Transport(address, "send message", e))?;
-        self.transport
-            .send_message(address, msg, pub_key, sig)
-            .await
-            .map_err(|e| Error::Transport(address, "send announce message", e))
-        // }
+
+        Ok(PreparedMessage::new(
+            address,
+            msg.with_pk(pub_key.to_bytes().to_vec())
+                .with_sig(sig.to_bytes().to_vec()),
+        ))
     }
 }
 
