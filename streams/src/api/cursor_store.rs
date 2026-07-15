@@ -137,15 +137,6 @@ impl CursorStore {
         self.0.get(topic).map(|inner| inner.cursors.iter())
     }
 
-    /// Reset every stored cursor to the initial stream position.
-    pub(crate) fn reset_cursors(&mut self) {
-        self.0.values_mut().for_each(|branch| {
-            branch.cursors.values_mut().for_each(|cursor| {
-                *cursor = INIT_MESSAGE_NUM;
-            });
-        });
-    }
-
     /// If the [`Permissioned`] [`Identifier`] is already in the map, and the permission is
     /// different, remove the old permission and keep the old cursor. Otherwise, insert the new
     /// permission and cursor
@@ -277,38 +268,5 @@ mod tests {
 
         assert!(branch_store.get_cursor(&topic_1, &identifier).is_none());
         assert!(branch_store.get_cursor(&topic_2, &identifier).is_none());
-    }
-
-    #[test]
-    fn branch_store_can_reset_all_cursors() {
-        let mut branch_store = CursorStore::new();
-        let identifier_1 = Identity::from(Ed25519::from_seed("identifier 1"))
-            .identifier()
-            .clone();
-        let identifier_2 = Identity::from(Ed25519::from_seed("identifier 2"))
-            .identifier()
-            .clone();
-        let permission_1 =
-            Permissioned::ReadWrite(identifier_1.clone(), PermissionDuration::Perpetual);
-        let permission_2 =
-            Permissioned::ReadWrite(identifier_2.clone(), PermissionDuration::Perpetual);
-        let topic_1 = Topic::new("topic 1".to_string());
-        let topic_2 = Topic::new("topic 2".to_string());
-
-        branch_store.new_branch(topic_1.clone());
-        branch_store.new_branch(topic_2.clone());
-        branch_store.insert_cursor(&topic_1, permission_1, 7);
-        branch_store.insert_cursor(&topic_2, permission_2, 13);
-
-        branch_store.reset_cursors();
-
-        assert_eq!(
-            branch_store.get_cursor(&topic_1, &identifier_1),
-            Some(crate::api::user::INIT_MESSAGE_NUM)
-        );
-        assert_eq!(
-            branch_store.get_cursor(&topic_2, &identifier_2),
-            Some(crate::api::user::INIT_MESSAGE_NUM)
-        );
     }
 }
