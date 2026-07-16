@@ -89,15 +89,26 @@ pub trait Transport<'a> {
     async fn latest_timestamp(&self) -> Result<u128>;
 }
 
+/// Store a confirmed message into a local readable transport cache.
+///
+/// This is intentionally separate from [`Transport::send_message`]. Some local transports use
+/// `send_message` to capture outbound messages before they are published, while SQL replay and
+/// network mirrors need to insert messages that are already confirmed/readable.
+pub trait MessageStore {
+    type Msg;
+
+    fn store_message(&mut self, address: Address, msg: Self::Msg) -> bool;
+}
+
 /// Localised mapping for tests and simulations
 #[cfg(feature = "bucket")]
 pub mod bucket;
-/// Split read/outbox client backing the queue-based network send pipeline
-#[cfg(feature = "bucket")]
-pub mod queue;
 /// `sqlx` based mysql client
 #[cfg(feature = "mysql-client")]
 pub mod mysql;
+/// Split read/outbox client backing the queue-based network send pipeline
+#[cfg(feature = "bucket")]
+pub mod queue;
 /// Localised micro tangle client
 #[cfg(feature = "utangle-client")]
 pub mod utangle;

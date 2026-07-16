@@ -17,7 +17,7 @@ use crate::{
     address::Address,
     error::{Error, Result},
     message::TransportMessage,
-    transport::Transport,
+    transport::{MessageStore, Transport},
 };
 
 /// A sealed, ready-to-broadcast message captured in the write (outbox) mapping.
@@ -164,6 +164,17 @@ impl<Msg: Clone> Client<Msg> {
             include_write_in_recv: self.include_write_in_recv,
             outbox_mode: self.outbox_mode,
         }
+    }
+}
+
+impl<Msg> MessageStore for Client<Msg>
+where
+    Msg: Clone,
+{
+    type Msg = Msg;
+
+    fn store_message(&mut self, address: Address, msg: Msg) -> bool {
+        self.push_to_reading(address, msg)
     }
 }
 

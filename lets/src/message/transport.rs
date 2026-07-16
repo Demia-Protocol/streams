@@ -8,7 +8,9 @@ use spongos::{ddml::commands::unwrap, PRP};
 
 // Local
 use crate::{
-    error::Result, id::{Ed25519Pub, Ed25519Sig}, message::{content::ContentUnwrap, hdf::HDF, preparsed::PreparsedMessage},
+    error::Result,
+    id::{Ed25519Pub, Ed25519Sig},
+    message::{content::ContentUnwrap, hdf::HDF, preparsed::PreparsedMessage},
 };
 
 /// Binary network Message representation.

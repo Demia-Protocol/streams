@@ -17,7 +17,7 @@ use crate::{
     address::Address,
     error::{Error, Result},
     message::TransportMessage,
-    transport::Transport,
+    transport::{MessageStore, Transport},
 };
 
 /// [`BTreeMap`] wrapper client for testing purposes
@@ -42,6 +42,22 @@ impl<Msg> Default for Client<Msg> {
         Self {
             bucket: Arc::new(spin::RwLock::new(BTreeMap::default())),
         }
+    }
+}
+
+impl<Msg> MessageStore for Client<Msg>
+where
+    Msg: Clone,
+{
+    type Msg = Msg;
+
+    fn store_message(&mut self, address: Address, msg: Msg) -> bool {
+        let mut bucket = self.bucket.write();
+        if bucket.contains_key(&address) {
+            return false;
+        }
+        bucket.entry(address).or_default().push(msg);
+        true
     }
 }
 
