@@ -27,6 +27,16 @@ use crate::{
     id::did::DIDUrlInfo,
 };
 
+/// Builds the canonical Stronghold record used for Streams DID method keys.
+///
+/// Streams stores method private keys under the normalized `did:demia:<tag>#<fragment>`
+/// form, even when the DID document method id uses a longer DID namespace.
+pub(crate) fn streams_method_record(did: &str, fragment: &str) -> String {
+    let tag = did.rsplit(':').next().unwrap_or(did);
+    let fragment = fragment.trim_start_matches('#');
+    format!("did:demia:{tag}#{fragment}")
+}
+
 /// Fetch the `DID` document from the tangle
 ///
 /// # Arguments

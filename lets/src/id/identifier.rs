@@ -19,9 +19,6 @@ use crypto::{
 };
 use crypto::{keys::x25519, signatures::ed25519};
 
-#[cfg(feature = "did")]
-use iota_stronghold::Location;
-
 // Streams
 use spongos::ddml::commands::{Ed25519, X25519};
 use spongos::{
@@ -42,17 +39,18 @@ use crate::{
     error::Error,
     id::{
         did::{
-            get_exchange_method, resolve_document, DIDUrlInfo, DID_ENCRYPTED_DATA_SIZE,
-            STREAMS_VAULT,
+            get_exchange_method, resolve_document, streams_method_record, DIDUrlInfo,
+            DID_ENCRYPTED_DATA_SIZE, STREAMS_VAULT,
         },
         IdentityKind,
     },
 };
 
 #[cfg(feature = "did")]
-use crate::{
-    id::{cache::IdentityCache, did::IdentityDocCache}
-};
+use iota_stronghold::Location;
+
+#[cfg(feature = "did")]
+use crate::id::{cache::IdentityCache, did::IdentityDocCache};
 
 use crate::{
     error::Result,
@@ -447,15 +445,6 @@ where
                     IdentityKind::DID(ref mut sender_info) => {
                         let receiver_method = get_exchange_method(url_info, cache).await?;
 
-                        // The sender's xkeys live at the normalized short method-URL vault location
-                        // `did:demia:<tag>#<exchange>`
-                        let sender_record = {
-                            let url_info = sender_info.info().url_info();
-                            let did_str = url_info.did();
-                            let tag = did_str.rsplit(':').next().unwrap_or(did_str);
-                            format!("did:demia:{}#{}", tag, url_info.exchange_fragment())
-                        };
-                        let sender_location = Location::generic(STREAMS_VAULT, sender_record.as_bytes());
                         // Get public key for encryption
                         let xkey = iota_sdk::crypto::keys::x25519::PublicKey::try_from_slice(
                             &receiver_method.data().try_decode().map_err(|e| {
@@ -469,18 +458,25 @@ where
                             )
                         })?;
 
-                        // Fetch stronghold instance
-                        let stronghold = sender_info
-                            .info_mut()
-                            .url_info_mut()
-                            .stronghold()
-                            .map_err(|e| SpongosError::Context("encrypting key", e.to_string()))?;
+                        let (record, stronghold) = {
+                            let url_info = sender_info.info_mut().url_info_mut();
+                            let record =
+                                streams_method_record(url_info.did(), url_info.exchange_fragment());
+                            let stronghold = url_info.stronghold().map_err(|e| {
+                                SpongosError::Context("encrypting key", e.to_string())
+                            })?;
+                            (record, stronghold)
+                        };
 
                         // Create an AEAD Encryption packet to be received and processed by the recipient
                         let encrypted_data = stronghold
                             .read()
                             .await
-                            .x25519_encrypt(xkey, sender_location, key.to_vec())
+                            .x25519_encrypt(
+                                xkey,
+                                Location::generic(STREAMS_VAULT, record.as_bytes()),
+                                key.to_vec(),
+                            )
                             .await
                             .map_err(|e| SpongosError::Context("encrypting key", e.to_string()))?;
 

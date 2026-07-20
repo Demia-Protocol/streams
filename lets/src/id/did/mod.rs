@@ -5,14 +5,10 @@ mod url_info;
 ///
 //mod keypair;
 pub use did::{DIDInfo, IdentityDocCache, DID};
-pub use did::streams_method_record_candidates_from_method_id;
 pub use url_info::DIDUrlInfo;
 //pub use keypair::{KeyPair};
 
-pub(crate) use did::{
-    get_exchange_method, resolve_document, streams_method_record_candidates,
-    streams_method_record_candidates_with_method_id,
-};
+pub(crate) use did::{get_exchange_method, resolve_document, streams_method_record};
 
 pub const STREAMS_VAULT: &[u8] = b"streams-secrets-vault";
 // 32 pub key + 12 nonce + 16 tag + 32 ciphertext
