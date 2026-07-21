@@ -38,7 +38,7 @@ use spongos::{
 
 #[cfg(feature = "did")]
 use lets::id::{
-    did::{StrongholdSecretManager, DID, IdentityDocCache},
+    did::{IdentityDocCache, StrongholdSecretManager, DID},
     IdentityKind,
 };
 // Local
@@ -829,17 +829,8 @@ where
 
     pub(crate) async fn send_prepared_message(&mut self, prepared: PreparedMessage) -> Result<TSR> {
         let address = prepared.address;
-        let public_key = prepared
-            .msg
-            .public_key()
-            .ok_or(Error::Setup("prepared message public key is missing"))?;
-        let signature = prepared
-            .msg
-            .signature()
-            .ok_or(Error::Setup("prepared message signature is missing"))?;
-
-        self.transport
-            .send_message(address, prepared.msg, public_key, signature)
+        prepared
+            .send_with(&mut self.transport)
             .await
             .map_err(|e| Error::Transport(address, "send prepared message", e))
     }
@@ -1138,146 +1129,13 @@ impl<T: serde::Serialize> serde::Serialize for User<T> {
 
 #[cfg(test)]
 mod tests {
-    use lets::transport::{bucket, queue};
+    use lets::transport::bucket;
 
     use crate::{api::user::User, Result};
 
     type Transport = bucket::Client;
 
     const AUTHOR_SEED: &str = "SPLIT_BUCKET_AUTHOR_SEED";
-    const BASE_BRANCH: &str = "BASE_BRANCH";
-    const PUBLIC_PAYLOAD: &[u8] = b"PUBLICPAYLOAD";
-    const MASKED_PAYLOAD: &[u8] = b"MASKEDPAYLOAD";
-
-    /// Sync the user's frontier across both the read mapping and the pending outbox,
-    /// so that newly sealed sends link past the undrained tail and cannot fork the
-    /// branch. Mirrors the `sync_all` helper that will live in the SDK.
-    async fn sync_all(user: &mut User<queue::Client>) -> Result<usize> {
-        user.transport_mut().set_recv_include_write(true);
-        let result = user.sync().await; // no `?` — flag must always reset
-        user.transport_mut().set_recv_include_write(false);
-        result
-    }
-
-    /// Sends route to the outbox (write mapping), not the read mapping; recv ignores
-    /// the outbox by default; `push_to_reading` promotes outbox -> read (the round-trip
-    /// ack) and makes the message readable.
-    #[tokio::test]
-    async fn send_routes_to_outbox_and_round_trip_promotes() -> Result<()> {
-        let transport = queue::Client::new_outbox();
-        let mut author = User::builder()
-            .with_identity(lets::id::Ed25519::from_seed(AUTHOR_SEED))
-            .with_transport(transport.clone())
-            .build();
-
-        let announcement = author.create_stream(BASE_BRANCH).await?;
-        let announce_addr = announcement.address();
-        for _ in 0..3 {
-            author
-                .send_signed_packet(BASE_BRANCH, PUBLIC_PAYLOAD, MASKED_PAYLOAD)
-                .await?;
-        }
-
-        // All 4 (announce + 3 packets) are in the outbox, read mapping is empty.
-        assert_eq!(transport.outbox_len(), 4);
-        assert!(
-            author.transport().recv_includes_write() == false,
-            "recv should not include write by default"
-        );
-
-        // A reader cannot see the announcement yet — it's only in the outbox.
-        let mut reader = User::builder()
-            .with_transport(transport.clone())
-            .build();
-        assert!(
-            reader.receive_message(announce_addr).await.is_err(),
-            "outbox messages must be invisible to a default recv"
-        );
-
-        // Emulate broadcast + network round-trip: promote every outbox entry to read.
-        let mut transport_mut = transport.clone();
-        for (addr, msg, _pk, _sig) in transport.outbox_snapshot() {
-            assert!(transport_mut.push_to_reading(addr, msg));
-        }
-        assert_eq!(transport.outbox_len(), 0, "outbox drained after round-trip");
-
-        // Now the announcement is readable.
-        reader.receive_message(announce_addr).await?;
-        Ok(())
-    }
-
-    /// The money test: a rebuilt author that syncs read-only forks the branch, while
-    /// one that runs `sync_all` (read + outbox) advances its frontier past the pending
-    /// tail and links cleanly. Proves replay needs no online user / no stored identity.
-    #[tokio::test]
-    async fn sync_all_prevents_outbound_fork_on_replay() -> Result<()> {
-        // Original session: announce + 3 packets sealed into the outbox.
-        let origin = queue::Client::new_outbox();
-        let mut author = User::builder()
-            .with_identity(lets::id::Ed25519::from_seed(AUTHOR_SEED))
-            .with_transport(origin.clone())
-            .build();
-        let announcement = author.create_stream(BASE_BRANCH).await?;
-        let announce_addr = announcement.address();
-        for _ in 0..3 {
-            author
-                .send_signed_packet(BASE_BRANCH, PUBLIC_PAYLOAD, MASKED_PAYLOAD)
-                .await?;
-        }
-
-        // Confirm only the announcement (round-trips first); the 3 data packets stay
-        // pending in the outbox — the state a crash/restart leaves behind.
-        let ann_msg = origin
-            .outbox_snapshot()
-            .into_iter()
-            .find(|(a, _, _, _)| *a == announce_addr)
-            .map(|(_, m, _, _)| m)
-            .expect("announce in outbox");
-        let mut origin_mut = origin.clone();
-        origin_mut.push_to_reading(announce_addr, ann_msg);
-
-        let pending: Vec<_> = origin.outbox_snapshot().into_iter().map(|(a, ..)| a).collect();
-        assert_eq!(pending.len(), 3, "3 data packets still pending");
-
-        // Two independent rebuilt sessions with identical outbox state (deep copy).
-        let transport_no_syncall: queue::Client = origin.deep_clone();
-        let transport_syncall: queue::Client = origin.deep_clone();
-
-        // Rebuild A: sync read-only, then send -> forks onto a pending position.
-        let mut author_fork = User::builder()
-            .with_identity(lets::id::Ed25519::from_seed(AUTHOR_SEED))
-            .with_transport(transport_no_syncall)
-            .build();
-        author_fork.receive_message(announce_addr).await?;
-        author_fork.sync().await?; // read-only: misses the pending tail
-        let fork_send = author_fork
-            .send_signed_packet(BASE_BRANCH, PUBLIC_PAYLOAD, MASKED_PAYLOAD)
-            .await?;
-        let fork_addr = fork_send.address();
-
-        // Rebuild B: sync_all (read + outbox), then send -> links past the tail.
-        let mut author_ok = User::builder()
-            .with_identity(lets::id::Ed25519::from_seed(AUTHOR_SEED))
-            .with_transport(transport_syncall)
-            .build();
-        author_ok.receive_message(announce_addr).await?;
-        sync_all(&mut author_ok).await?;
-        let ok_send = author_ok
-            .send_signed_packet(BASE_BRANCH, PUBLIC_PAYLOAD, MASKED_PAYLOAD)
-            .await?;
-        let ok_addr = ok_send.address();
-
-        assert!(
-            pending.contains(&fork_addr),
-            "read-only replay collides with a pending message (fork): {fork_addr}"
-        );
-        assert!(
-            !pending.contains(&ok_addr),
-            "sync_all replay must advance past the pending tail: {ok_addr}"
-        );
-        assert_ne!(fork_addr, ok_addr, "sync_all changes the outbound frontier");
-        Ok(())
-    }
 
     #[tokio::test]
     async fn serialize() -> Result<()> {

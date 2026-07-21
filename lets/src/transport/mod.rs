@@ -31,6 +31,33 @@ impl<Msg> PreparedMessage<Msg> {
     }
 }
 
+impl PreparedMessage {
+    pub fn public_key(&self) -> Result<Ed25519Pub> {
+        self.msg.public_key().ok_or(Error::AddressError(
+            "prepared message public key is missing",
+            self.address,
+        ))
+    }
+
+    pub fn signature(&self) -> Result<Ed25519Sig> {
+        self.msg.signature().ok_or(Error::AddressError(
+            "prepared message signature is missing",
+            self.address,
+        ))
+    }
+
+    pub async fn send_with<T, R>(self, transport: &mut T) -> Result<R>
+    where
+        T: for<'a> Transport<'a, Msg = TransportMessage, SendResponse = R> + Send,
+    {
+        let public_key = self.public_key()?;
+        let signature = self.signature()?;
+        transport
+            .send_message(self.address, self.msg, public_key, signature)
+            .await
+    }
+}
+
 /// Network transport abstraction.
 /// Parametrized by the type of message addresss.
 /// Message address is used to identify/locate a message (eg. like URL for HTTP).
@@ -106,9 +133,6 @@ pub mod bucket;
 /// `sqlx` based mysql client
 #[cfg(feature = "mysql-client")]
 pub mod mysql;
-/// Split read/outbox client backing the queue-based network send pipeline
-#[cfg(feature = "bucket")]
-pub mod queue;
 /// Localised micro tangle client
 #[cfg(feature = "utangle-client")]
 pub mod utangle;
