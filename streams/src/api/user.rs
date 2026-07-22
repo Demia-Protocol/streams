@@ -1135,8 +1135,6 @@ mod tests {
 
     type Transport = bucket::Client;
 
-    const AUTHOR_SEED: &str = "SPLIT_BUCKET_AUTHOR_SEED";
-
     #[tokio::test]
     async fn serialize() -> Result<()> {
         let psk = lets::id::Psk::from_seed(b"Psk1");
