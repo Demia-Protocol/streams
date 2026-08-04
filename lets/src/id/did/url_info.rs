@@ -95,7 +95,7 @@ impl core::hash::Hash for DIDUrlInfo {
 
 impl PartialEq for DIDUrlInfo {
     fn eq(&self, other: &Self) -> bool {
-        // Compare by alias tag 
+        // Compare by alias tag
         did_tag(&self.did) == did_tag(&other.did)
             && self.exchange_fragment == other.exchange_fragment
             && self.signing_fragment == other.signing_fragment
@@ -359,13 +359,19 @@ mod tests {
         // Different scope AND different node endpoint — still the same subject/identity.
         let long = info(&format!("did:demia:usa:dmia:{TAG}"), "http://node-b:14265");
 
-        assert_eq!(short, long, "short and long forms of the same tag must be equal");
+        assert_eq!(
+            short, long,
+            "short and long forms of the same tag must be equal"
+        );
         assert_eq!(short.cmp(&long), Ordering::Equal, "Ord must agree with Eq");
 
         // Hash must agree with Eq (equal values hash equally), so they collapse in a HashSet.
         let mut set = std::collections::HashSet::new();
         set.insert(short);
-        assert!(!set.insert(long), "long form must dedupe against the short form in a HashSet");
+        assert!(
+            !set.insert(long),
+            "long form must dedupe against the short form in a HashSet"
+        );
     }
 
     #[test]

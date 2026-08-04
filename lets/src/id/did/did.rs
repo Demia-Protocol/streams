@@ -27,6 +27,16 @@ use crate::{
     id::did::DIDUrlInfo,
 };
 
+/// Builds the canonical Stronghold record used for Streams DID method keys.
+///
+/// Streams stores method private keys under the normalized `did:demia:<tag>#<fragment>`
+/// form, even when the DID document method id uses a longer DID namespace.
+pub(crate) fn streams_method_record(did: &str, fragment: &str) -> String {
+    let tag = did.rsplit(':').next().unwrap_or(did);
+    let fragment = fragment.trim_start_matches('#');
+    format!("did:demia:{tag}#{fragment}")
+}
+
 /// Fetch the `DID` document from the tangle
 ///
 /// # Arguments
@@ -40,8 +50,8 @@ pub(crate) async fn resolve_document<C: IdentityCache>(
     if let Some(doc) = cache.get_did_document(&did_url).await {
         Ok(doc.clone())
     } else {
-        let client_url = std::env::var("DID_CLIENT_URL")
-            .unwrap_or_else(|_| url_info.client_url().to_string());
+        let client_url =
+            std::env::var("DID_CLIENT_URL").unwrap_or_else(|_| url_info.client_url().to_string());
         let client = DIDClient::builder()
             .with_primary_node(&client_url, None)
             .map_err(|e| Error::did("DIDClient set primary node", e))?

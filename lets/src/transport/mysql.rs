@@ -6,8 +6,8 @@ use crate::{
     transport::Transport,
 };
 use alloc::vec::Vec;
-use core::marker::PhantomData;
 use async_trait::async_trait;
+use core::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPool;
 use sqlx::QueryBuilder;
@@ -44,10 +44,7 @@ impl<SM, DM> Client<SM, DM> {
     }
 
     pub async fn new_with(pool: MySqlPool) -> Result<Client> {
-        Ok(Client(
-            pool,
-            PhantomData,
-        ))
+        Ok(Client(pool, PhantomData))
     }
 }
 
@@ -383,9 +380,23 @@ impl SqlMessage {
         self
     }
 
+    /// Returns the parsed public key when possible
+    pub fn public_key(&self) -> Option<Ed25519Pub> {
+        <[u8; 32]>::try_from(self.public_key.as_slice())
+            .ok()
+            .and_then(|bytes| Ed25519Pub::try_from_bytes(bytes).ok())
+    }
+
     fn with_signature(mut self, signature: Ed25519Sig) -> Self {
         self.signature = signature.to_bytes().to_vec();
         self
+    }
+
+    /// Returns the parsed signature when possible
+    pub fn signature(&self) -> Option<Ed25519Sig> {
+        <[u8; 64]>::try_from(self.signature.as_slice())
+            .ok()
+            .map(Ed25519Sig::from_bytes)
     }
 }
 

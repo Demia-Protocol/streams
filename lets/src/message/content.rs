@@ -51,7 +51,7 @@ pub trait ContentVerify<T> {
     async fn verify(&mut self, verifier: &T) -> Result<&mut Self>;
 }
 
-#[cfg(feature="did")]
+#[cfg(feature = "did")]
 #[async_trait]
 pub trait ContentVerify<T, C> {
     async fn verify(&mut self, verifier: &T, cache: &mut C) -> Result<&mut Self>;

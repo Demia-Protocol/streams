@@ -14,7 +14,49 @@ use crate::id::{Ed25519Pub, Ed25519Sig};
 use crate::{
     address::Address,
     error::{Error, Result},
+    message::TransportMessage,
 };
+
+/// A sealed streams message that can be sent without reconstructing the originating user.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct PreparedMessage<Msg = TransportMessage> {
+    pub address: Address,
+    pub msg: Msg,
+}
+
+impl<Msg> PreparedMessage<Msg> {
+    pub fn new(address: Address, msg: Msg) -> Self {
+        Self { address, msg }
+    }
+}
+
+impl PreparedMessage {
+    pub fn public_key(&self) -> Result<Ed25519Pub> {
+        self.msg.public_key().ok_or(Error::AddressError(
+            "prepared message public key is missing",
+            self.address,
+        ))
+    }
+
+    pub fn signature(&self) -> Result<Ed25519Sig> {
+        self.msg.signature().ok_or(Error::AddressError(
+            "prepared message signature is missing",
+            self.address,
+        ))
+    }
+
+    pub async fn send_with<T, R>(self, transport: &mut T) -> Result<R>
+    where
+        T: for<'a> Transport<'a, Msg = TransportMessage, SendResponse = R> + Send,
+    {
+        let public_key = self.public_key()?;
+        let signature = self.signature()?;
+        transport
+            .send_message(self.address, self.msg, public_key, signature)
+            .await
+    }
+}
 
 /// Network transport abstraction.
 /// Parametrized by the type of message addresss.
@@ -72,6 +114,17 @@ pub trait Transport<'a> {
         'a: 'async_trait;
 
     async fn latest_timestamp(&self) -> Result<u128>;
+}
+
+/// Store a confirmed message into a local readable transport cache.
+///
+/// This is intentionally separate from [`Transport::send_message`]. Some local transports use
+/// `send_message` to capture outbound messages before they are published, while SQL replay and
+/// network mirrors need to insert messages that are already confirmed/readable.
+pub trait MessageStore {
+    type Msg;
+
+    fn store_message(&mut self, address: Address, msg: Self::Msg) -> bool;
 }
 
 /// Localised mapping for tests and simulations
