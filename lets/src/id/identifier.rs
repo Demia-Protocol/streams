@@ -470,7 +470,7 @@ where
 
                         // Create an AEAD Encryption packet to be received and processed by the recipient
                         let encrypted_data = stronghold
-                            .read()
+                            .write()
                             .await
                             .x25519_encrypt(
                                 xkey,

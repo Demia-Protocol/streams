@@ -60,7 +60,7 @@ async fn ed25519_sign_with_streams_key(
     data: &[u8],
 ) -> SpongosResult<Ed25519Sig> {
     let record = streams_method_record(did, fragment);
-    let lock = stronghold.read().await;
+    let lock = stronghold.write().await;
     let sig = lock
         .ed25519_sign(Location::generic(STREAMS_VAULT, record.as_bytes()), data)
         .await
@@ -76,7 +76,7 @@ async fn x25519_decrypt_with_streams_key(
     data: EncryptedData,
 ) -> SpongosResult<Vec<u8>> {
     let record = streams_method_record(did, fragment);
-    let lock = stronghold.read().await;
+    let lock = stronghold.write().await;
     lock.x25519_decrypt(Location::generic(STREAMS_VAULT, record.as_bytes()), data)
         .await
         .map_err(|error| SpongosError::Context("decrypting data", error.to_string()))
