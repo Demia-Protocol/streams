@@ -11,7 +11,7 @@ use lets::{
     address::{Address, MsgId},
     id::{Identifier, PermissionDuration, Permissioned, Psk, PskId},
     message::{Message as LetsMessage, PreparsedMessage, Topic, TransportMessage, HDF, PCF},
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 
 // Local
@@ -128,6 +128,27 @@ where
         Top: Into<Topic>,
         Psks: IntoIterator<Item = PskId>,
     {
+        let prepared = self.prepare_keyload(topic, subscribers, psk_ids).await?;
+        self.send_prepared_response(prepared).await
+    }
+}
+
+impl<T> User<T>
+where
+    T: for<'a> Transport<'a, Msg = TransportMessage> + Send,
+{
+    pub async fn prepare_keyload<Subscribers, Psks, Top>(
+        &mut self,
+        topic: Top,
+        subscribers: Subscribers,
+        psk_ids: Psks,
+    ) -> Result<SendResponse<PreparedMessage>>
+    where
+        Subscribers: IntoIterator<Item = Permissioned<Identifier>> + Clone,
+        Subscribers::IntoIter: ExactSizeIterator + Clone + Send + Sync,
+        Top: Into<Topic>,
+        Psks: IntoIterator<Item = PskId>,
+    {
         // Check conditions
         let stream_address = self.stream_address().ok_or(Error::Setup(
             "before sending a keyload, the stream must be created",
@@ -219,9 +240,9 @@ where
             return Err(Error::AddressUsed("keyload", message_address));
         }
 
-        let send_response = self.send_message(message_address, transport_msg).await?;
+        let prepared = self.prepare_message(message_address, transport_msg).await?;
 
-        // If message has been sent successfully, commit message to stores
+        // Preparing mutates the stream state. The caller must persist or publish the prepared message.
         for subscriber in subscribers {
             if self.should_store_cursor(&topic, subscriber.as_ref()) {
                 self.update_permissions(&topic, subscriber, Some(INIT_MESSAGE_NUM));
@@ -232,7 +253,7 @@ where
         self.store_spongos(rel_address, spongos, link_to);
         // Update Branch Links
         self.set_latest_link(topic, message_address.relative());
-        Ok(SendResponse::new(message_address, send_response))
+        Ok(SendResponse::new(message_address, prepared))
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::{Error, Result, SendResponse, User};
 use lets::{
     message::{Topic, TransportMessage},
-    transport::Transport,
+    transport::{PreparedMessage, Transport},
 };
 
 /// A simple builder used by a [`User`] for creating messages for transport.
@@ -135,27 +135,63 @@ impl<'a, P, Trans> MessageBuilder<'a, P, Trans> {
         P: AsRef<[u8]>,
         Trans: for<'b> Transport<'b, Msg = TransportMessage, SendResponse = TSR> + Send,
     {
-        if self.payload.as_ref().is_empty() {
+        let MessageBuilder {
+            user,
+            private,
+            signed,
+            topic,
+            payload,
+        } = self;
+        let prepared = Self::prepare_inner(user, topic, signed, private, payload).await?;
+        user.send_prepared_response(prepared).await
+    }
+
+    /// Prepares the message and mutates local Streams state without publishing to transport.
+    ///
+    /// The returned prepared message must be persisted or published by the caller.
+    pub async fn prepare(self) -> Result<SendResponse<PreparedMessage>>
+    where
+        P: AsRef<[u8]>,
+        Trans: for<'b> Transport<'b, Msg = TransportMessage> + Send,
+    {
+        let MessageBuilder {
+            user,
+            private,
+            signed,
+            topic,
+            payload,
+        } = self;
+        Self::prepare_inner(user, topic, signed, private, payload).await
+    }
+
+    async fn prepare_inner(
+        user: &mut User<Trans>,
+        topic: Topic,
+        signed: bool,
+        private_payload: bool,
+        payload: P,
+    ) -> Result<SendResponse<PreparedMessage>>
+    where
+        P: AsRef<[u8]>,
+        Trans: for<'b> Transport<'b, Msg = TransportMessage> + Send,
+    {
+        if payload.as_ref().is_empty() {
             return Err(Error::PayloadEmpty);
         }
 
         let mut public: &[u8] = &[];
         let mut private: &[u8] = &[];
 
-        if self.private {
-            private = self.payload.as_ref()
+        if private_payload {
+            private = payload.as_ref()
         } else {
-            public = self.payload.as_ref()
+            public = payload.as_ref()
         }
 
-        if self.signed {
-            self.user
-                .send_signed_packet(self.topic, public, private)
-                .await
+        if signed {
+            user.prepare_signed_packet(topic, public, private).await
         } else {
-            self.user
-                .send_tagged_packet(self.topic, public, private)
-                .await
+            user.prepare_tagged_packet(topic, public, private).await
         }
     }
 }
