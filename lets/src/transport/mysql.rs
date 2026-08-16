@@ -204,19 +204,16 @@ impl<SM, DM> Client<SM, DM> {
     pub async fn retrieve_messages(&mut self, addresses: Vec<Address>) -> Result<Vec<SqlMessage>> {
         let app_id_bytes = addresses[0].base().as_bytes().to_vec();
 
-        let placeholders: String = addresses.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-
-        let query_string = format!(
-            "SELECT * FROM sql_messages WHERE msg_id IN ({}) AND app_id = ?",
-            placeholders
-        );
-
-        let mut query = sqlx::query_as::<sqlx::mysql::MySql, SqlMessage>(&query_string);
+        let mut query_builder = QueryBuilder::new("SELECT * FROM sql_messages WHERE msg_id IN (");
+        let mut separated = query_builder.separated(", ");
         for addr in addresses {
-            query = query.bind(addr.relative().as_bytes().to_vec());
+            separated.push_bind(addr.relative().as_bytes().to_vec());
         }
+        separated.push_unseparated(") AND app_id = ");
+        query_builder.push_bind(app_id_bytes);
+
+        let query = query_builder.build_query_as::<SqlMessage>();
         let sql_messages: Vec<SqlMessage> = query
-            .bind(app_id_bytes)
             .fetch_all(&self.0)
             .await
             .map_err(|e| Error::MySqlClient("fetching batch messages", e))?
@@ -290,19 +287,16 @@ where
         }
 
         let app_id_bytes = addresses[0].base().as_bytes().to_vec();
-        let placeholders: String = addresses.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-        let query_string = format!(
-            "SELECT * FROM sql_messages WHERE msg_id IN ({}) AND app_id = ?",
-            placeholders
-        );
-
-        let mut query = sqlx::query_as::<sqlx::mysql::MySql, SqlMessage>(&query_string);
+        let mut query_builder = QueryBuilder::new("SELECT * FROM sql_messages WHERE msg_id IN (");
+        let mut separated = query_builder.separated(", ");
         for addr in &addresses {
-            query = query.bind(addr.relative().as_bytes().to_vec());
+            separated.push_bind(addr.relative().as_bytes().to_vec());
         }
+        separated.push_unseparated(") AND app_id = ");
+        query_builder.push_bind(app_id_bytes);
 
-        let rows = match query
-            .bind(app_id_bytes)
+        let rows = match query_builder
+            .build_query_as::<SqlMessage>()
             .fetch_all(&self.0)
             .await
             .map_err(|e| Error::MySqlClient("fetching batch messages", e))
